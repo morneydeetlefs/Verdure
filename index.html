@@ -397,9 +397,171 @@
 
   /* Scrollbars */
   * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+  /* ── PLAYER SETUP SCREEN ── */
+  #playerSetupWrap {
+    display: none; flex-direction: column; align-items: center; gap: 20px;
+    position: fixed; inset: 0; background: var(--soil); z-index: 9997;
+    justify-content: center;
+  }
+  #playerSetupWrap h2 { font-family: var(--font-display); font-size: 1.8rem; color: var(--sprout); }
+  #playerSetupWrap p { font-size: 0.88rem; color: var(--dim); }
+  .setup-input {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    color: var(--bright); font-family: var(--font-display); font-size: 1.1rem;
+    padding: 10px 20px; border-radius: 4px; text-align: center; width: 260px;
+    outline: none;
+  }
+  .setup-input:focus { border-color: var(--leaf); }
+
+  /* ── SETTINGS PANEL ── */
+  #settingsPanel {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(10,8,5,0.88);
+    display: none; align-items: center; justify-content: center;
+  }
+  #settingsPanel.open { display: flex; }
+  .settings-box {
+    background: var(--soil); border: 1px solid var(--border);
+    border-radius: 8px; padding: 28px 32px; width: 340px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .settings-box h3 { font-family: var(--font-display); font-size: 1.3rem; color: var(--sprout); }
+  .settings-row { display: flex; flex-direction: column; gap: 5px; }
+  .settings-label { font-family: var(--font-mono); font-size: 0.68rem; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .settings-input {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    color: var(--bright); font-family: var(--font-body); font-size: 0.88rem;
+    padding: 7px 12px; border-radius: 4px; outline: none; width: 100%;
+  }
+  .settings-input:focus { border-color: var(--leaf); }
+  input[type=range].settings-input { padding: 4px 0; }
+  .settings-btn-row { display: flex; gap: 8px; }
+  .settings-btn {
+    flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border);
+    background: rgba(255,255,255,0.05); color: var(--text);
+    font-family: var(--font-mono); font-size: 0.72rem; cursor: pointer;
+    transition: all 0.12s; letter-spacing: 0.06em;
+  }
+  .settings-btn:hover { background: rgba(107,143,78,0.2); border-color: var(--leaf); color: var(--bright); }
+  .settings-btn.danger { border-color: var(--rust); color: var(--rust); }
+  .settings-btn.danger:hover { background: var(--rust); color: var(--petal); }
+  .settings-btn.primary { background: var(--moss); border-color: var(--leaf); color: var(--petal); }
+  .settings-btn.primary:hover { background: var(--leaf); }
+
+  /* ── MINIMAP ── */
+  #minimap {
+    position: absolute; bottom: 12px; right: 12px;
+    width: 160px; z-index: 30;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+    display: none;
+  }
+  #minimap.open { display: block; }
+  .minimap-header {
+    padding: 5px 10px; font-family: var(--font-mono); font-size: 0.62rem;
+    color: var(--dim); border-bottom: 1px solid var(--border);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .minimap-maps { padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+  .minimap-map-item {
+    padding: 5px 8px; border-radius: 3px; font-size: 0.75rem; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.12s; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .minimap-map-item:hover { background: rgba(107,143,78,0.15); border-color: var(--border); }
+  .minimap-map-item.current { background: rgba(107,143,78,0.2); border-color: var(--leaf); color: var(--bright); }
+  .minimap-map-item.unvisited { color: var(--dim); }
+
+  /* ── ENERGY SYSTEM ── */
+  .hud-energy {
+    padding: 10px 14px;
+    display: flex; flex-direction: column; justify-content: center; gap: 5px;
+    border-right: 1px solid var(--border); min-width: 90px;
+  }
+  .energy-label { font-family: var(--font-mono); font-size: 0.6rem; color: var(--dim); letter-spacing: 0.1em; }
+  .energy-pips { display: flex; gap: 3px; flex-wrap: wrap; max-width: 80px; }
+  .energy-pip {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1px solid var(--border); transition: background 0.3s;
+  }
+  .energy-pip.full { background: var(--sprout); border-color: var(--leaf); }
+  .energy-pip.empty { background: transparent; }
+  .energy-count { font-family: var(--font-mono); font-size: 0.65rem; color: var(--amber); }
+
+  /* ── PARTICLE EFFECTS ── */
+  .particle {
+    position: fixed; pointer-events: none; z-index: 9000;
+    font-size: 1.1rem; animation: particle-float 1.2s ease-out forwards;
+  }
+  @keyframes particle-float {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(0.5); }
+  }
+  .xp-particle {
+    font-family: var(--font-mono); font-size: 0.75rem; font-weight: 500;
+    color: var(--amber); background: rgba(26,20,12,0.8);
+    padding: 2px 8px; border-radius: 10px;
+    animation: particle-float 1.4s ease-out forwards;
+  }
+
+  /* ── PLANT MODE ── */
+  #plantModeBar {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(74,94,58,0.95); border: 1px solid var(--leaf);
+    border-radius: 20px; padding: 6px 18px;
+    font-family: var(--font-mono); font-size: 0.72rem; color: var(--bloom);
+    z-index: 40; display: none; align-items: center; gap: 10px;
+    backdrop-filter: blur(4px);
+  }
+  #plantModeBar.active { display: flex; }
+  #mapStage.plant-mode { cursor: crosshair; }
+
+  /* ── HIDDEN OBJECT FLASH ── */
+  @keyframes hidden-reveal {
+    0%  { filter: brightness(3) saturate(0); transform: translate(-50%,-50%) scale(1.4); }
+    100%{ filter: brightness(1) saturate(1); transform: translate(-50%,-50%) scale(1); }
+  }
+  .game-object.just-revealed { animation: hidden-reveal 0.6s ease-out; }
 </style>
 </head>
 <body>
+
+<!-- PLAYER SETUP -->
+<div id="playerSetupWrap">
+  <h2>🌿 Welcome to Verdure</h2>
+  <p>What shall we call you?</p>
+  <input class="setup-input" id="playerNameInput" placeholder="Your name…" maxlength="24">
+  <button class="pick-btn" onclick="confirmPlayerSetup()">Begin →</button>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel">
+  <div class="settings-box">
+    <h3>⚙ Settings</h3>
+    <div class="settings-row">
+      <div class="settings-label">Player Name</div>
+      <input class="settings-input" id="settingsName" placeholder="Your name">
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">Master Volume</div>
+      <input type="range" class="settings-input" id="settingsVolume" min="0" max="1" step="0.05" value="0.7">
+    </div>
+    <div class="settings-row">
+      <div class="settings-label">Show Labels</div>
+      <div style="display:flex;gap:8px;margin-top:2px">
+        <button class="settings-btn" id="labelsToggleBtn" onclick="toggleLabelsFromSettings()">Labels: On</button>
+      </div>
+    </div>
+    <div class="settings-btn-row">
+      <button class="settings-btn primary" onclick="saveSettings()">Save</button>
+      <button class="settings-btn" onclick="closeSettings()">Cancel</button>
+    </div>
+    <div class="settings-btn-row">
+      <button class="settings-btn danger" onclick="confirmResetPlayer()">Reset Progress</button>
+    </div>
+  </div>
+</div>
 
 <!-- LOADING SCREEN -->
 <div id="loadScreen">
@@ -408,13 +570,13 @@
   <p id="loadMsg">Loading world…</p>
 </div>
 
-<!-- WORLD FILE PICKER (shown if no world.json found) -->
+<!-- WORLD FILE PICKER -->
 <div id="worldPickWrap" style="display:none">
   <h1>🌿 Verdure</h1>
   <p>Load a <code>world.json</code> exported from the World Editor to begin.</p>
   <button class="pick-btn" onclick="document.getElementById('worldFileInput').click()">📂 Open world.json</button>
   <input type="file" id="worldFileInput" accept=".json" style="display:none" onchange="loadWorldFile(event)">
-  <p style="font-size:0.75rem;margin-top:8px">Or place <code>world.json</code> in the same folder as this file.</p>
+  <p style="font-size:0.75rem;margin-top:8px">Or place <code>world.json</code> in <code>../data/world.json</code> relative to this file.</p>
 </div>
 
 <!-- MAIN GAME -->
@@ -430,6 +592,13 @@
     <div id="transitionOverlay"></div>
     <div id="actionPopup"></div>
     <div id="dialogBox"></div>
+    <div id="plantModeBar">
+      🌱 Plant mode — click map to place · <button onclick="cancelPlantMode()" style="background:none;border:none;color:var(--rust);cursor:pointer;font-family:var(--font-mono);font-size:0.72rem">✕ Cancel</button>
+    </div>
+    <div id="minimap">
+      <div class="minimap-header">Maps</div>
+      <div class="minimap-maps" id="minimapMaps"></div>
+    </div>
   </div>
 
   <!-- HUD -->
@@ -438,6 +607,11 @@
       <div class="hud-player-name" id="hudPlayerName">Gardener</div>
       <div class="hud-level" id="hudLevel">LVL 1 · 0 XP</div>
       <div class="xp-bar-wrap"><div class="xp-bar" id="xpBar" style="width:0%"></div></div>
+    </div>
+    <div class="hud-energy">
+      <div class="energy-label">Energy</div>
+      <div class="energy-pips" id="energyPips"></div>
+      <div class="energy-count" id="energyCount"></div>
     </div>
     <div class="hud-inventory">
       <div class="inv-label">Inventory</div>
@@ -449,8 +623,8 @@
       <div class="blight-bar-wrap"><div class="blight-bar" id="blightBar" style="width:0%"></div></div>
     </div>
     <div class="hud-actions">
-      <button class="hud-btn" onclick="toggleLabels()">🏷 Labels</button>
-      <button class="hud-btn" onclick="toggleMasks()">🗺 Masks</button>
+      <button class="hud-btn" onclick="toggleMinimap()">🗺 Maps</button>
+      <button class="hud-btn" onclick="openSettings()">⚙ Settings</button>
     </div>
   </div>
 </div>
@@ -1242,6 +1416,443 @@ window.addEventListener('resize', () => {
   const map = world?.maps?.find(m=>m.id===currentMapId);
   if (map) { renderObjects(map); renderMaskOverlay(map); }
 });
+
+// ══════════════════════════════════════════════════════
+// ENERGY SYSTEM
+// ══════════════════════════════════════════════════════
+const MAX_ENERGY = 20;
+const ENERGY_REGEN_MS = 3 * 60 * 1000; // 3 min per pip
+const ENERGY_COSTS = { collect:1, harvest:2, plant:2, clear_hazard:1, water:1, inspect:1 };
+
+function getEnergy() {
+  // Regenerate energy based on elapsed time
+  const now = Date.now();
+  const lastRegen = player.last_regen || now;
+  const elapsed = now - lastRegen;
+  const pipsToRegen = Math.floor(elapsed / ENERGY_REGEN_MS);
+  if (pipsToRegen > 0) {
+    player.energy = Math.min(MAX_ENERGY, (player.energy || MAX_ENERGY) + pipsToRegen);
+    player.last_regen = lastRegen + pipsToRegen * ENERGY_REGEN_MS;
+    savePlayer();
+  }
+  return player.energy ?? MAX_ENERGY;
+}
+
+function useEnergy(action) {
+  const cost = ENERGY_COSTS[action] || 1;
+  const current = getEnergy();
+  if (current < cost) {
+    const regenLeft = ENERGY_REGEN_MS - (Date.now() - (player.last_regen || Date.now()));
+    showToast(`Not enough energy — refills in ${formatDuration(regenLeft)}`, 'error');
+    return false;
+  }
+  player.energy = current - cost;
+  if (!player.last_regen) player.last_regen = Date.now();
+  savePlayer();
+  updateEnergyUI();
+  return true;
+}
+
+function updateEnergyUI() {
+  const energy = getEnergy();
+  const pipsEl = document.getElementById('energyPips');
+  const countEl = document.getElementById('energyCount');
+  if (!pipsEl) return;
+  let html = '';
+  for (let i = 0; i < MAX_ENERGY; i++) {
+    html += `<div class="energy-pip ${i < energy ? 'full' : 'empty'}"></div>`;
+  }
+  pipsEl.innerHTML = html;
+  if (countEl) countEl.textContent = `${energy}/${MAX_ENERGY}`;
+}
+
+// Regen ticker — check every 30s
+setInterval(() => { getEnergy(); updateEnergyUI(); }, 30000);
+
+// ══════════════════════════════════════════════════════
+// AMBIENT SOUND SYSTEM
+// ══════════════════════════════════════════════════════
+let ambientAudio = null;
+let masterVolume = 0.7;
+
+function playAmbientSound(src) {
+  stopAmbientSound();
+  if (!src) return;
+  try {
+    ambientAudio = new Audio(src);
+    ambientAudio.loop = true;
+    ambientAudio.volume = masterVolume * 0.4;
+    ambientAudio.play().catch(() => {});
+  } catch(e) {}
+}
+
+function stopAmbientSound() {
+  if (ambientAudio) { try { ambientAudio.pause(); ambientAudio.currentTime = 0; } catch(e) {} ambientAudio = null; }
+}
+
+function setVolume(vol) {
+  masterVolume = parseFloat(vol);
+  if (ambientAudio) ambientAudio.volume = masterVolume * 0.4;
+}
+
+function tickAmbientSounds() {
+  // Play ambient sound of first matching entity on current map
+  if (!world || !currentMapId) return;
+  const map = world.maps.find(m => m.id === currentMapId);
+  if (!map) return;
+  for (const obj of (map.objects||[])) {
+    const entity = world.entities?.find(e => e.id === obj.entity_id);
+    if (entity?.ambient_sound) { playAmbientSound(entity.ambient_sound); return; }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PLANT MODE — place seed from inventory onto map
+// ══════════════════════════════════════════════════════
+let plantModeEntityId = null;
+
+function enterPlantMode(entityId) {
+  plantModeEntityId = entityId;
+  document.getElementById('plantModeBar').classList.add('active');
+  document.getElementById('mapStage').classList.add('plant-mode');
+  closeActionPopup();
+  showToast('Click on the map to plant here');
+}
+
+function cancelPlantMode() {
+  plantModeEntityId = null;
+  document.getElementById('plantModeBar').classList.remove('active');
+  document.getElementById('mapStage').classList.remove('plant-mode');
+}
+
+document.getElementById('mapStage').addEventListener('click', function(e) {
+  if (!plantModeEntityId) return;
+  if (e.target.closest('.game-object')) return; // clicked an existing object
+  const rect = this.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  doPlantOnMap(plantModeEntityId, x, y);
+  cancelPlantMode();
+});
+
+function doPlantOnMap(entityId, x, y) {
+  const entity = world.entities?.find(e => e.id === entityId);
+  if (!entity) return;
+
+  // Check place_requires
+  const unmet = (entity.place_requires||[]).find(rid => !hasItemInInventory(rid));
+  if (unmet) {
+    const req = world.entities?.find(e => e.id === unmet);
+    showToast(`Need ${req?.name||'required tool'} to plant`, 'error'); return;
+  }
+
+  if (!useEnergy('plant')) return;
+
+  // Check mask — no_plant zones block planting
+  const map = world.maps.find(m => m.id === currentMapId);
+  if (isInMaskZone(map, x, y, 'no_plant')) {
+    showToast('Cannot plant here', 'error'); return;
+  }
+
+  // Remove 1 from inventory
+  const slot = player.inventory.find(i => i.entity_id === entityId);
+  if (slot) { slot.quantity = Math.max(0, slot.quantity - 1); }
+
+  // Add to map objects
+  const newObj = {
+    id: 'placed_' + Date.now(),
+    entity_id: entityId,
+    label: '',
+    x, y,
+    size: 48,
+    z_order: 10,
+    rotation: 0,
+    animation: entity.category === 'plant' ? 'sway' : 'none',
+    collision: 'walkable',
+    trigger_radius: 8,
+    state: entity.states?.[0]?.id || 'idle',
+    notes: 'player_placed'
+  };
+  if (!map.objects) map.objects = [];
+  map.objects.push(newObj);
+
+  // Set planted_at
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  player.map_states[currentMapId][newObj.id] = {
+    state: newObj.state, planted_at: Date.now()
+  };
+
+  giveXP(XP_REWARDS.plant, 'plant');
+  savePlayer();
+  renderObjects(map);
+  updateInventoryUI();
+  spawnParticle(
+    document.getElementById('mapStage').getBoundingClientRect().left + x * document.getElementById('mapStage').offsetWidth,
+    document.getElementById('mapStage').getBoundingClientRect().top + y * document.getElementById('mapStage').offsetHeight,
+    '🌱'
+  );
+  showToast(`Planted ${entity.name}`);
+}
+
+function isInMaskZone(map, x, y, maskType) {
+  if (!map?.masks) return false;
+  return (map.masks).some(mask => {
+    if (maskType && mask.type !== maskType) return false;
+    return pointInPolygon(x, y, mask.points);
+  });
+}
+
+function pointInPolygon(x, y, points) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const xi = points[i].x, yi = points[i].y;
+    const xj = points[j].x, yj = points[j].y;
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+// ══════════════════════════════════════════════════════
+// HIDDEN OBJECT SYSTEM
+// ══════════════════════════════════════════════════════
+function isObjectVisible(obj, entity) {
+  if (!entity?.hidden) return true;
+  // Visible if already revealed in player state
+  const os = player.map_states[currentMapId]?.[obj.id];
+  return os?.state === 'found' || os?.revealed === true;
+}
+
+// Patch renderObjects to hide hidden objects
+const _origRenderObjects = renderObjects;
+// (handled inline in renderObjects via isObjectVisible check already inserted below)
+
+// ══════════════════════════════════════════════════════
+// PARTICLE EFFECTS
+// ══════════════════════════════════════════════════════
+function spawnParticle(x, y, content, isXP = false) {
+  const p = document.createElement('div');
+  p.className = isXP ? 'xp-particle' : 'particle';
+  p.textContent = content;
+  p.style.left = (x - 12) + 'px';
+  p.style.top = (y - 12) + 'px';
+  document.body.appendChild(p);
+  setTimeout(() => p.remove(), 1400);
+}
+
+function spawnXPParticle(x, y, amount) {
+  spawnParticle(x, y, `+${amount} XP`, true);
+}
+
+// Patch giveXP to spawn particles
+const _origGiveXP = giveXP;
+function giveXP(amount, type) {
+  if (!amount) return;
+  // Find approximate screen centre for particle
+  const stage = document.getElementById('mapStage');
+  const r = stage?.getBoundingClientRect();
+  if (r) spawnXPParticle(r.left + r.width/2, r.top + r.height - 60, amount);
+  _origGiveXP(amount, type);
+}
+
+// ══════════════════════════════════════════════════════
+// PLAYER SETUP
+// ══════════════════════════════════════════════════════
+function showPlayerSetup() {
+  document.getElementById('loadScreen').style.display = 'none';
+  document.getElementById('playerSetupWrap').style.display = 'flex';
+  setTimeout(() => document.getElementById('playerNameInput')?.focus(), 100);
+}
+
+function confirmPlayerSetup() {
+  const name = document.getElementById('playerNameInput')?.value.trim();
+  if (!name) { showToast('Enter your name first', 'error'); return; }
+  player.name = name;
+  player.energy = MAX_ENERGY;
+  player.last_regen = Date.now();
+  savePlayer();
+  document.getElementById('playerSetupWrap').style.display = 'none';
+  document.getElementById('loadScreen').style.display = 'flex';
+  setLoad(80, 'Building world…');
+  startGame();
+}
+
+document.getElementById('playerNameInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmPlayerSetup();
+});
+
+// ══════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════
+function openSettings() {
+  const panel = document.getElementById('settingsPanel');
+  document.getElementById('settingsName').value = player.name || '';
+  document.getElementById('settingsVolume').value = masterVolume;
+  document.getElementById('labelsToggleBtn').textContent = `Labels: ${showLabels ? 'On' : 'Off'}`;
+  panel.classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function saveSettings() {
+  const name = document.getElementById('settingsName')?.value.trim();
+  if (name) player.name = name;
+  masterVolume = parseFloat(document.getElementById('settingsVolume')?.value || 0.7);
+  setVolume(masterVolume);
+  savePlayer();
+  updateHUD();
+  closeSettings();
+  showToast('Settings saved');
+}
+
+function toggleLabelsFromSettings() {
+  showLabels = !showLabels;
+  document.getElementById('labelsToggleBtn').textContent = `Labels: ${showLabels ? 'On' : 'Off'}`;
+  const map = world.maps.find(m=>m.id===currentMapId);
+  if (map) renderObjects(map);
+}
+
+function confirmResetPlayer() {
+  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  localStorage.removeItem('verdure_player');
+  location.reload();
+}
+
+// ══════════════════════════════════════════════════════
+// MINIMAP / MAP NAVIGATION
+// ══════════════════════════════════════════════════════
+function toggleMinimap() {
+  const mm = document.getElementById('minimap');
+  mm.classList.toggle('open');
+  if (mm.classList.contains('open')) renderMinimap();
+}
+
+function renderMinimap() {
+  const el = document.getElementById('minimapMaps');
+  if (!world?.maps) return;
+  el.innerHTML = world.maps.map(m => {
+    const visited = player.visited_maps?.includes(m.id);
+    const isCurrent = m.id === currentMapId;
+    return `<div class="minimap-map-item ${isCurrent?'current':''} ${!visited&&!isCurrent?'unvisited':''}"
+      onclick="minimapNavigate('${m.id}')">
+      ${m.type==='top-down'?'🗺':'🏠'} ${visited||isCurrent ? m.name : '???'}
+    </div>`;
+  }).join('');
+}
+
+function minimapNavigate(mapId) {
+  if (mapId === currentMapId) return;
+  // Only allow navigation to visited maps or maps connected by portals from current map
+  const map = world.maps.find(m => m.id === currentMapId);
+  const isConnected = (map?.portals||[]).some(p => p.to === mapId);
+  const isVisited = player.visited_maps?.includes(mapId);
+  if (!isConnected && !isVisited) {
+    showToast('Find a portal to reach this map', 'error'); return;
+  }
+  document.getElementById('minimap').classList.remove('open');
+  enterMap(mapId);
+}
+
+// ══════════════════════════════════════════════════════
+// PATCH EXISTING SYSTEMS
+// ══════════════════════════════════════════════════════
+
+// Patch doCollect to use energy
+const _origDoCollect = doCollect;
+function doCollect(obj, entity, ix) {
+  const energyAction = entity.category === 'hazard' ? 'clear_hazard' : 'collect';
+  if (!useEnergy(energyAction)) return;
+  _origDoCollect(obj, entity, ix);
+  // Particle effect
+  const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
+  if (el) {
+    const r = el.getBoundingClientRect();
+    spawnParticle(r.left + r.width/2, r.top, CATEGORY_ICONS[entity.category] || '✨');
+  }
+}
+
+// Patch doHarvest to use energy
+const _origDoHarvest = doHarvest;
+function doHarvest(obj, entity, ix) {
+  if (!useEnergy('harvest')) return;
+  _origDoHarvest(obj, entity, ix);
+}
+
+// Patch doGrow to use energy
+const _origDoGrow = doGrow;
+function doGrow(obj, entity, ix) {
+  if (!useEnergy('water')) return;
+  _origDoGrow(obj, entity, ix);
+}
+
+// Patch doReveal to show flash animation
+const _origDoReveal = doReveal;
+function doReveal(obj, entity, ix) {
+  if (!useEnergy('inspect')) return;
+  _origDoReveal(obj, entity, ix);
+  setTimeout(() => {
+    const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
+    if (el) {
+      el.classList.add('just-revealed');
+      setTimeout(() => el.classList.remove('just-revealed'), 700);
+    }
+  }, 50);
+}
+
+// Patch renderObjects to skip hidden entities
+const _baseRenderObjects = renderObjects;
+function renderObjects(map) {
+  // Filter map objects — hidden entities only show if revealed
+  const originalObjects = map.objects;
+  map.objects = (originalObjects||[]).filter(obj => {
+    const entity = world.entities?.find(e => e.id === obj.entity_id);
+    return isObjectVisible(obj, entity);
+  });
+  _baseRenderObjects(map);
+  map.objects = originalObjects; // restore
+}
+
+// Patch selectInventoryItem to enter plant mode for plantable items
+function selectInventoryItem(entityId) {
+  document.querySelectorAll('.inv-slot').forEach(s => s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const entity = world.entities?.find(e => e.id === entityId);
+  if (!entity) return;
+  // If it's a plant or has a plant interaction, offer to plant it
+  if (entity.category === 'plant' || (entity.interactions||[]).some(ix=>ix.action==='plant')) {
+    enterPlantMode(entityId);
+  } else {
+    showToast(`Selected: ${entity.name}`);
+  }
+}
+
+// Patch doEnterMap to handle ambient sound
+const _origDoEnterMap = doEnterMap;
+function doEnterMap(map) {
+  stopAmbientSound();
+  _origDoEnterMap(map);
+  setTimeout(() => tickAmbientSounds(), 800);
+  renderMinimap();
+}
+
+// Patch startGame to check for first run
+const _origStartGame = startGame;
+function startGame() {
+  if (!player.name || player.name === 'Gardener') {
+    // Check if truly first run
+    const saved = localStorage.getItem('verdure_player');
+    if (!saved) { showPlayerSetup(); return; }
+  }
+  _origStartGame();
+}
+
+// Patch updateHUD to include energy
+const _origUpdateHUD = updateHUD;
+function updateHUD() {
+  _origUpdateHUD();
+  updateEnergyUI();
+}
 
 // ══════════════════════════════════════════════════════
 // BOOT
