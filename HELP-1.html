@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdure World Editor — Help & Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --soil:     #2a1f14;
+    --bark:     #3d2b1a;
+    --moss:     #4a5e3a;
+    --leaf:     #6b8f4e;
+    --sprout:   #9bbf73;
+    --bloom:    #c8e6a0;
+    --petal:    #f0f7e6;
+    --rust:     #b05c2a;
+    --amber:    #d4892a;
+    --fog:      #c2c9b8;
+    --concrete: #8a9080;
+    --blight:   #3a3a32;
+
+    --bg:       #f7f4ee;
+    --sidebar:  #2a1f14;
+    --panel:    #ffffff;
+    --border:   #ddd8cc;
+    --text:     #2a2018;
+    --dim:      #6a6458;
+    --code-bg:  #f0ede6;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    overflow-y: auto;
+    padding: 0 0 40px;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #4a3828; }
+
+  .sidebar-logo {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid #3d2b1a;
+  }
+  .sidebar-logo h1 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--sprout);
+    letter-spacing: 0.04em;
+  }
+  .sidebar-logo p {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: #6a6050;
+    margin-top: 4px;
+    letter-spacing: 0.06em;
+  }
+
+  .nav-section {
+    padding: 20px 0 8px 24px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #5a5040;
+  }
+  .nav-link {
+    display: block;
+    padding: 7px 24px;
+    font-size: 0.84rem;
+    color: #a09080;
+    text-decoration: none;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-link:hover { color: var(--bloom); background: rgba(255,255,255,0.04); }
+  .nav-link.sub { padding-left: 36px; font-size: 0.78rem; color: #7a7060; }
+  .nav-link.sub:hover { color: var(--sprout); }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    max-width: 860px;
+    padding: 52px 56px 80px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    margin-bottom: 52px;
+    padding-bottom: 40px;
+    border-bottom: 2px solid var(--border);
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--leaf);
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    line-height: 1.15;
+    color: var(--soil);
+    margin-bottom: 16px;
+  }
+  .hero h1 em { color: var(--leaf); font-style: italic; }
+  .hero p {
+    font-size: 1.05rem;
+    color: var(--dim);
+    max-width: 580px;
+    line-height: 1.75;
+  }
+
+  .version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--soil);
+    color: var(--sprout);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-top: 20px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    margin-bottom: 60px;
+    scroll-margin-top: 32px;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: var(--soil);
+    margin-bottom: 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  h2 .section-num {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--leaf);
+    display: block;
+    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--soil);
+    margin: 28px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 16px;
+    background: var(--leaf);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  h4 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--moss);
+    margin: 18px 0 6px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  p { margin-bottom: 12px; }
+  p:last-child { margin-bottom: 0; }
+
+  ul, ol {
+    padding-left: 22px;
+    margin-bottom: 14px;
+  }
+  li { margin-bottom: 5px; }
+  li:last-child { margin-bottom: 0; }
+
+  strong { color: var(--soil); font-weight: 600; }
+  em { color: var(--moss); }
+
+  a { color: var(--leaf); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── CODE ── */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--rust);
+  }
+
+  pre {
+    background: var(--soil);
+    border-radius: 6px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 14px 0 18px;
+    border-left: 3px solid var(--leaf);
+  }
+  pre code {
+    font-size: 0.82rem;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--bloom);
+    line-height: 1.7;
+  }
+  pre code .key  { color: var(--amber); }
+  pre code .str  { color: var(--sprout); }
+  pre code .num  { color: #e08060; }
+  pre code .cmt  { color: #6a6050; font-style: italic; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.9rem;
+  }
+  .callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+  .callout.tip    { background: #f0f7e6; border: 1px solid #c8e6a0; }
+  .callout.note   { background: #f0f4ff; border: 1px solid #c0ccee; }
+  .callout.warn   { background: #fff8ee; border: 1px solid #f0d090; }
+  .callout.info   { background: #f5f0ea; border: 1px solid var(--border); }
+
+  /* ── TABLES ── */
+  .table-wrap { overflow-x: auto; margin: 14px 0 20px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  thead th {
+    background: var(--soil);
+    color: var(--bloom);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border: none;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #f7f3ec; }
+  td { padding: 9px 14px; vertical-align: top; }
+  td:first-child { font-weight: 500; color: var(--soil); white-space: nowrap; }
+  td code { font-size: 0.78rem; }
+
+  /* ── CARDS ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+  .card-title { font-weight: 600; font-size: 0.88rem; color: var(--soil); margin-bottom: 4px; }
+  .card-desc { font-size: 0.78rem; color: var(--dim); line-height: 1.5; }
+
+  /* ── SCHEMA BLOCK ── */
+  .schema-block {
+    background: var(--soil);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin: 14px 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: var(--fog);
+    border-left: 3px solid var(--amber);
+  }
+  .schema-block .sk { color: var(--amber); }
+  .schema-block .sv { color: var(--sprout); }
+  .schema-block .sc { color: #5a5040; font-style: italic; }
+  .schema-block .st { color: var(--fog); }
+
+  /* ── STEP LIST ── */
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 16px 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .steps li:last-child { border-bottom: none; margin-bottom: 0; }
+  .steps li::before {
+    content: counter(step);
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    background: var(--leaf);
+    color: white;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .steps li div { flex: 1; }
+  .steps li strong { display: block; margin-bottom: 3px; font-size: 0.92rem; }
+
+  /* ── ANIM PREVIEW ── */
+  .anim-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .anim-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+  .anim-card .anim-icon { font-size: 1.8rem; display: block; margin-bottom: 8px; }
+  .anim-card .anim-name {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--leaf);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .anim-card .anim-desc { font-size: 0.75rem; color: var(--dim); }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* ── PRINT ── */
+  @media print {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 20px; }
+  }
+
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 28px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR NAV -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>🌿 Verdure</h1>
+    <p>World Editor · Help & Reference</p>
+  </div>
+
+  <div class="nav-section">Getting Started</div>
+  <a class="nav-link" href="#overview">Overview</a>
+  <a class="nav-link" href="#interface">Interface Layout</a>
+  <a class="nav-link" href="#quickstart">Quick Start</a>
+
+  <div class="nav-section">Maps Tab</div>
+  <a class="nav-link" href="#maps">Working with Maps</a>
+  <a class="nav-link sub" href="#map-create">Creating a Map</a>
+  <a class="nav-link sub" href="#map-background">Backgrounds</a>
+  <a class="nav-link sub" href="#map-tools">Canvas Tools</a>
+  <a class="nav-link sub" href="#map-props">Map Properties</a>
+  <a class="nav-link sub" href="#portals">Portals</a>
+
+  <div class="nav-section">Entities Tab</div>
+  <a class="nav-link" href="#entities">Entity Library</a>
+  <a class="nav-link sub" href="#entity-identity">Identity & Sprite</a>
+  <a class="nav-link sub" href="#entity-props">Properties</a>
+  <a class="nav-link sub" href="#entity-sounds">Sounds</a>
+  <a class="nav-link sub" href="#entity-states">States</a>
+  <a class="nav-link sub" href="#entity-requirements">Requirements</a>
+  <a class="nav-link sub" href="#entity-interactions">Interactions</a>
+  <a class="nav-link sub" href="#dialog-trees">Dialog Trees</a>
+
+  <div class="nav-section">Placed Objects</div>
+  <a class="nav-link" href="#placing">Placing Objects</a>
+  <a class="nav-link sub" href="#obj-transform">Transform & Depth</a>
+  <a class="nav-link sub" href="#obj-animation">Animation</a>
+  <a class="nav-link sub" href="#obj-collision">Collision & Radius</a>
+
+  <div class="nav-section">Data</div>
+  <a class="nav-link" href="#json">JSON Tab</a>
+  <a class="nav-link" href="#schema">World Schema</a>
+  <a class="nav-link" href="#export-import">Export & Import</a>
+
+  <div class="nav-section">Reference</div>
+  <a class="nav-link" href="#categories">Entity Categories</a>
+  <a class="nav-link" href="#effects">Effects Reference</a>
+  <a class="nav-link" href="#zones">Climate Zones</a>
+  <a class="nav-link" href="#workflow">Recommended Workflow</a>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Documentation</div>
+    <h1>Verdure<br><em>World Editor</em></h1>
+    <p>A browser-based tool for building the maps, entities, portals, dialogs and interactions that make up the Verdure game world. Everything you create is stored in a single <code>world.json</code> file you can deploy alongside the game engine.</p>
+    <div class="version-badge">🌱 Version 0.1 · Single-file editor · No server required</div>
+  </div>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="overview">
+    <h2><span class="section-num">01 — Overview</span>What is the World Editor?</h2>
+    <p>The Verdure World Editor is a standalone HTML file (<code>editor/index.html</code>) that runs entirely in your browser. It has three tabs, each serving a distinct purpose:</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🗺</div>
+        <div class="card-title">Maps Tab</div>
+        <div class="card-desc">Create and edit maps. Upload backgrounds, place objects, add portals, set climate zones and blight levels.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌾</div>
+        <div class="card-title">Entities Tab</div>
+        <div class="card-desc">Define the library of things that exist in the world — tools, plants, buildings, creatures, hazards, portals.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">{ }</div>
+        <div class="card-title">JSON Tab</div>
+        <div class="card-desc">Preview, copy, or download the complete <code>world.json</code> data file for use by the game engine.</div>
+      </div>
+    </div>
+    <p>All data is auto-saved to your browser's <strong>localStorage</strong> as you work. Use <strong>Export JSON</strong> to download a permanent copy, and <strong>Import</strong> to load a previously exported file.</p>
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div>The editor and game engine share the same <code>world.json</code> schema. Define your entities and maps here, export, and the game engine reads the result directly. No conversion step needed.</div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="interface">
+    <h2><span class="section-num">02 — Interface</span>Layout Overview</h2>
+    <p>The editor has a consistent three-panel layout in every tab:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Area</th><th>Maps Tab</th><th>Entities Tab</th></tr></thead>
+        <tbody>
+          <tr><td>Left Panel</td><td>Map list + New Map button</td><td>Entity library + category filters</td></tr>
+          <tr><td>Centre</td><td>Canvas — visual map editor</td><td>Entity form — all properties</td></tr>
+          <tr><td>Right Panel</td><td>Properties panel (map or object)</td><td>—</td></tr>
+          <tr><td>Header</td><td colspan="2">Tab switcher · Import · Export JSON</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Header Controls</h3>
+    <ul>
+      <li><strong>Maps / Entities / JSON</strong> — switches the active tab</li>
+      <li><strong>Import</strong> — load a <code>world.json</code> file from disk, replacing current data</li>
+      <li><strong>Export JSON</strong> — download the complete world as <code>world.json</code>, including all base64 images and audio</li>
+    </ul>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠</div>
+      <div><strong>Import replaces everything.</strong> Always export a backup before importing a new file if you want to preserve your current work.</div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="quickstart">
+    <h2><span class="section-num">03 — Quick Start</span>Building Your First Scene</h2>
+    <ol class="steps">
+      <li>
+        <div>
+          <strong>Create some entities first</strong>
+          Switch to the <strong>Entities</strong> tab and click <strong>+ New Entity</strong>. Create at least one tool (e.g. Trowel), one plant (e.g. Wildflower Seed), and one hazard (e.g. Litter Pile). Give each a name, category, and optionally upload a sprite image.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Create a map</strong>
+          Switch to the <strong>Maps</strong> tab and click <strong>+ New Map</strong>. Name it, choose <em>Top-down</em> type, pick a climate zone, and set a blight level (75 = heavily neglected). Click Create Map.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Upload a background image</strong>
+          With your map selected, click the 🖼 button in the canvas toolbar and upload an image. AI-generated images work well — try prompting for a "top-down view of an abandoned urban lot, hand-drawn illustration style."
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Place objects</strong>
+          Select the <strong>＋ Place</strong> tool, then click anywhere on the canvas. A modal appears — choose an entity from the dropdown and click Place. Repeat for each object. Use the <strong>↖ Select</strong> tool to click and drag objects to reposition them.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Add a portal to another map</strong>
+          Create a second map (e.g. a Garden Shed, side-view type). Back on the first map, select the <strong>🚪 Portal</strong> tool and click where the door should be. Set the target map in the modal. Click Add Portal.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Export your world</strong>
+          Click <strong>Export JSON</strong> in the header. Save <code>world.json</code> into your project's <code>data/</code> folder alongside the game engine.
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="maps">
+    <h2><span class="section-num">04 — Maps Tab</span>Working with Maps</h2>
+    <p>Maps are the spaces players inhabit. Each map has a background image, a set of placed objects, portals connecting to other maps, and metadata like climate zone and blight level.</p>
+
+    <h3 id="map-create">Creating a Map</h3>
+    <p>Click <strong>+ New Map</strong> in the left panel. The modal asks for:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Map Name</td><td>Display name, e.g. "Abandoned Corner Lot" or "Rooftop Garden"</td></tr>
+          <tr><td>Type</td><td><strong>Top-down</strong> for outdoor/overhead spaces; <strong>Side-view</strong> for interiors like sheds, rooms, underground</td></tr>
+          <tr><td>Climate Zone</td><td>1–12, matching US Hardiness Zones. Controls which plants can grow here</td></tr>
+          <tr><td>Blight Level</td><td>0–100. How neglected the space is. 0 = fully restored, 100 = completely blighted</td></tr>
+          <tr><td>Description</td><td>Flavour text shown to the player when they enter</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="map-background">Uploading a Background Image</h3>
+    <p>With a map selected, click the <strong>🖼</strong> button in the canvas toolbar. Choose any image file — it's stored as base64 inside <code>world.json</code>. Click <strong>✕</strong> to remove a background.</p>
+    <div class="callout tip">
+      <div class="callout-icon">🎨</div>
+      <div>For a consistent hand-drawn aesthetic, generate backgrounds using an AI image tool. Suggested prompts:
+        <ul style="margin-top:8px">
+          <li>"top-down view of an abandoned urban lot with cracked concrete, hand-drawn illustration, muted colours"</li>
+          <li>"side-view interior of a dusty garden shed, flat 2D illustration, warm earthy tones"</li>
+          <li>"top-down rooftop garden, sketch style, overgrown planter boxes"</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 id="map-tools">Canvas Toolbar Tools</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tool</th><th>Key</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>↖ Select</td><td>Default</td><td>Click to select a placed object; drag to reposition it. Click empty canvas to deselect.</td></tr>
+          <tr><td>＋ Place</td><td>—</td><td>Click anywhere on the canvas to open the Place Object modal. Choose an entity from your library.</td></tr>
+          <tr><td>🚪 Portal</td><td>—</td><td>Click anywhere to add a portal at that position. Opens portal settings modal.</td></tr>
+          <tr><td>🖼 Background</td><td>—</td><td>Upload a background image for the current map.</td></tr>
+          <tr><td>✕ Clear BG</td><td>—</td><td>Remove the current background image.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="map-props">Map Properties Panel</h3>
+    <p>When no object is selected, the right panel shows map-level properties. Edit any field and click <strong>Apply</strong> to save. The climate zone grid lets you click any zone number to change it.</p>
+
+    <h3 id="portals">Portals</h3>
+    <p>Portals are doors, gates, paths, ladders — any transition point between maps. There are two ways to create them:</p>
+
+    <h4>Method 1 — Portal Tool (Maps tab)</h4>
+    <ol>
+      <li>Select the 🚪 Portal tool</li>
+      <li>Click the canvas where you want the portal to appear</li>
+      <li>Fill in the label (e.g. "Shed Door"), target map, and required level</li>
+      <li>Click Add Portal</li>
+    </ol>
+
+    <h4>Method 2 — Entity with category "portal" (Entities tab)</h4>
+    <ol>
+      <li>Create an entity with category set to <code>portal</code></li>
+      <li>Add a sprite (e.g. a drawn door, gate, or ladder)</li>
+      <li>Switch to Maps tab, use the ＋ Place tool, select your portal entity</li>
+      <li>When a portal-category entity is selected, additional fields appear for target map and required level</li>
+    </ol>
+
+    <div class="callout note">
+      <div class="callout-icon">ℹ</div>
+      <div>Both methods produce identical data in <code>world.json</code>. The entity method is preferred when you want a custom sprite for the portal. The tool method is faster for quick, iconographic portals.</div>
+    </div>
+
+    <h4>Editing a Portal After Placement</h4>
+    <p>Select the portal object on the canvas using the Select tool. The properties panel shows a <strong>Portal Target Map</strong> dropdown — change it and click Apply to relink. An ⚠ warning appears if the portal has no target set.</p>
+
+    <h4>Deleting a Portal</h4>
+    <p>Select the portal object and click <strong>Delete</strong> in the properties footer. This removes both the object and its corresponding portal record from <code>map.portals[]</code>.</p>
+  </section>
+
+  <hr>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="entities">
+    <h2><span class="section-num">05 — Entities Tab</span>Building Your Entity Library</h2>
+    <p>Entities are the reusable definitions of everything that can exist on a map — tools, plants, buildings, creatures, hazards, portals, decorations, and hidden objects. You define them once here, then place instances of them on maps.</p>
+
+    <p>Use the <strong>category filter tags</strong> at the top of the left panel to filter the list by type. Click <strong>+ New Entity</strong> to create one.</p>
+
+    <h3 id="entity-identity">Identity & Sprite</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Name</td><td>Display name shown to players and in the editor</td></tr>
+          <tr><td>Category</td><td>One of 8 types — see <a href="#categories">Entity Categories</a></td></tr>
+          <tr><td>Description</td><td>Flavour text describing the entity</td></tr>
+          <tr><td>Rarity</td><td><code>common</code>, <code>uncommon</code>, <code>rare</code>, or <code>legendary</code></td></tr>
+          <tr><td>Sprite / Image</td><td>The visual used on the map canvas and in-game</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Setting a Sprite</h4>
+    <p>In the Identity section of the entity form:</p>
+    <ul>
+      <li>Click the <strong>📁 Upload Image File</strong> button — pick any PNG, JPG, GIF, or WebP from your computer. It's converted to base64 and stored immediately.</li>
+      <li>Or paste a URL into the text field below the button (e.g. from a hosted assets folder).</li>
+      <li>The thumbnail on the left previews the image. Click it to re-upload.</li>
+      <li>Click <strong>✕ Remove Sprite</strong> to clear it.</li>
+    </ul>
+    <div class="callout tip">
+      <div class="callout-icon">🎨</div>
+      <div>Use transparent-background PNG files for sprites placed on map backgrounds. Generate them with AI tools using prompts like "isometric pixel art watering can, transparent background, 128x128".</div>
+    </div>
+
+    <h3 id="entity-props">Properties</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Zone Requirements</td><td>Which climate zones (1–12) this entity can appear in. Leave all off = available everywhere.</td></tr>
+          <tr><td>Effect</td><td>Passive gameplay effect this entity has when placed. See <a href="#effects">Effects Reference</a>.</td></tr>
+          <tr><td>Grow Time (hours)</td><td>For plants: how many real-world hours before it reaches the next growth state.</td></tr>
+          <tr><td>Growth Speed Multiplier</td><td>Slider from 0.1× to 5×. Multiplies grow time at runtime. 2.0 = grows twice as fast.</td></tr>
+          <tr><td>Collectible</td><td>Can the player pick this up and add it to their inventory?</td></tr>
+          <tr><td>Interactable</td><td>Can the player interact with this entity?</td></tr>
+          <tr><td>Hidden</td><td>Must be discovered before it becomes visible. Used for hidden object gameplay.</td></tr>
+          <tr><td>Tradeable</td><td>Can this entity be traded between players?</td></tr>
+          <tr><td>Respawns</td><td>Does this entity reappear after being collected or harvested?</td></tr>
+          <tr><td>Respawn After</td><td>Visible when Respawns is checked. Number of hours before it reappears.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="entity-sounds">Sounds</h3>
+    <h4>Ambient Sound (entity-level)</h4>
+    <p>A looping audio file that plays when a player is near this entity. Set it in the Properties section:</p>
+    <ul>
+      <li>Click <strong>🔊 Upload Audio</strong> to upload an MP3, OGG, or WAV file</li>
+      <li>Or paste a URL into the text field</li>
+      <li>Click ▶ to preview it in the browser</li>
+      <li>Click ✕ to remove it</li>
+    </ul>
+
+    <h4>Interaction Sounds (per interaction)</h4>
+    <p>Each interaction can have its own one-shot sound that plays when triggered. See the <strong>🔔 Sound</strong> row in each interaction — upload a file or paste a URL.</p>
+
+    <h3 id="entity-states">States</h3>
+    <p>States represent the different conditions an entity can be in. For example, a plant might have states: <code>seed</code>, <code>sprout</code>, <code>bloom</code>. A building might have <code>ruined</code>, <code>restoring</code>, <code>restored</code>.</p>
+    <p>Each state has an <strong>ID</strong> (used in code) and a <strong>Label</strong> (shown to players). Click <strong>+ Add</strong> to add a new state. The first state is used as the default when an instance is placed.</p>
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div>Always include an <code>idle</code> state as the starting point. The game engine transitions between states based on interactions and grow timers.</div>
+    </div>
+
+    <h3 id="entity-requirements">Required Tools to Place/Plant</h3>
+    <p>Use the <strong>Required Tools to Place/Plant</strong> section to gate who can place this entity. Click <strong>+ Add</strong> and select a tool entity from the dropdown. Players must have <em>all</em> listed items in their inventory to place this entity on a map.</p>
+    <p>For example: a rare plant might require both a Trowel and a pair of Gardening Gloves to plant.</p>
+    <p>This is stored as <code>place_requires: ["entity_id_1", "entity_id_2"]</code> on the entity.</p>
+
+    <h3 id="entity-interactions">Interactions</h3>
+    <p>Interactions define what happens when a player does something to this entity. Click <strong>+ Add</strong> to add one. Each interaction has:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Trigger</td><td>What the player does: <code>click</code>, <code>collect</code>, <code>water</code>, <code>harvest</code>, <code>inspect</code>, <code>plant</code></td></tr>
+          <tr><td>Action</td><td>What happens: <code>collect</code>, <code>grow</code>, <code>reveal</code>, <code>unlock</code>, <code>reward</code>, <code>transform</code>, <code>gift</code>, <code>plant</code>, <code>harvest</code>, <code>dialog</code></td></tr>
+          <tr><td>Reward</td><td>What the player receives, e.g. <code>seed_packet</code>, <code>10_coins</code>, <code>trowel</code></td></tr>
+          <tr><td>🔧 Requires</td><td>Optional. A tool entity the player must have in their inventory for this interaction to fire.</td></tr>
+          <tr><td>🔔 Sound</td><td>Optional. Audio file or URL to play when this interaction fires.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout info">
+      <div class="callout-icon">🔍</div>
+      <div>The difference between <strong>place_requires</strong> (entity level) and <strong>🔧 Requires</strong> (interaction level): place_requires gates whether the entity can be planted at all; Requires gates whether a specific action can be performed on it once placed.</div>
+    </div>
+
+    <h3 id="dialog-trees">Dialog Trees</h3>
+    <p>To add a conversation to an entity, set an interaction's <strong>Action</strong> to <code>dialog</code>. An <strong>✎ Edit Dialog</strong> button appears. Click it to open the dialog tree editor.</p>
+
+    <h4>Dialog Editor Overview</h4>
+    <p>The dialog editor is a full node-graph canvas. Each node represents a moment in conversation:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Element</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Node</td><td>A single conversational beat. Has a speaker, text, and 0–4 player choices.</td></tr>
+          <tr><td>Start Node</td><td>Highlighted in amber — this is the first node shown when dialog begins. Click ⚑ on any node to set it as start.</td></tr>
+          <tr><td>Choice</td><td>A player response option. Links to another node (branching) or null (ends conversation).</td></tr>
+          <tr><td>Connection Line</td><td>Green/amber bezier curves show which choices lead to which nodes.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>Building a Dialog Tree</h4>
+    <ol class="steps">
+      <li><div><strong>Add nodes</strong> — click <strong>+ Node</strong> in the toolbar. A new node appears on the canvas.</div></li>
+      <li><div><strong>Position nodes</strong> — drag them around the canvas to lay out the conversation flow. Use <strong>Auto Layout</strong> to arrange them in a grid automatically.</div></li>
+      <li><div><strong>Edit a node</strong> — click any node to open its editor on the right. Set the Speaker name and dialog Text.</div></li>
+      <li><div><strong>Add choices</strong> — click <strong>+ Add</strong> in the Choices section. Enter the choice text and select which node it leads to. Optionally add a reward for choosing it.</div></li>
+      <li><div><strong>Link choices</strong> — in the "leads to" dropdown, select the destination node. If left as "end conversation", clicking that choice ends the dialog.</div></li>
+      <li><div><strong>Set start node</strong> — click ⚑ on the node that should open the conversation. It turns amber.</div></li>
+      <li><div><strong>Click Done</strong> — saves the dialog and returns to the entity form.</div></li>
+    </ol>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div>Node IDs are editable — give them meaningful names like <code>greeting</code>, <code>accepts_trade</code>, <code>refuses_trade</code> to make the graph readable. Renaming a node automatically updates all references to it.</div>
+    </div>
+
+    <p>Dialogs are stored in <code>world.dialogs[]</code> and referenced from the interaction via <code>dialog_id</code>.</p>
+  </section>
+
+  <hr>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="placing">
+    <h2><span class="section-num">06 — Placed Objects</span>Placing & Configuring Objects</h2>
+    <p>When you place an entity on a map, you create an <em>instance</em> of it. The instance inherits its entity's properties but can have its own position, size, rotation, animation, state, and label.</p>
+
+    <h3>Placing an Object</h3>
+    <ol>
+      <li>Select the <strong>＋ Place</strong> tool</li>
+      <li>Click anywhere on the canvas</li>
+      <li>In the modal, choose an entity from the dropdown — if you choose a <code>portal</code> category entity, additional portal fields appear</li>
+      <li>Optionally override the label, then click Place</li>
+    </ol>
+
+    <h3>Selecting & Moving</h3>
+    <ul>
+      <li>Switch to the <strong>↖ Select</strong> tool</li>
+      <li>Click an object to select it — a green outline appears and the properties panel updates</li>
+      <li><strong>Drag</strong> the selected object to reposition it</li>
+      <li>Click empty canvas space to deselect</li>
+    </ul>
+
+    <h3 id="obj-transform">Size, Z-Order & Rotation</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Property</th><th>Range</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Size</td><td>16–256 px</td><td>How large the object appears on the canvas. Slider updates live.</td></tr>
+          <tr><td>Z-Order</td><td>1–100</td><td>Depth layer. Higher values render on top of lower ones. Use this to layer objects correctly — a tree (z:5) behind a character (z:50).</td></tr>
+          <tr><td>Rotation</td><td>0–360°</td><td>Rotates the sprite. Useful for paths, directional objects, fallen items. Slider updates live.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="obj-animation">Animation</h3>
+    <p>Select an animation style by clicking one of the tag buttons in the properties panel. The animation applies immediately on the canvas.</p>
+    <div class="anim-grid">
+      <div class="anim-card">
+        <span class="anim-icon">🌿</span>
+        <span class="anim-name">sway</span>
+        <span class="anim-desc">Gentle left-right rotation. Plants, trees, long grass.</span>
+      </div>
+      <div class="anim-card">
+        <span class="anim-icon">🐛</span>
+        <span class="anim-name">jitter</span>
+        <span class="anim-desc">Rapid small shake. Creatures, hazards, active machines.</span>
+      </div>
+      <div class="anim-card">
+        <span class="anim-icon">⭐</span>
+        <span class="anim-name">pop</span>
+        <span class="anim-desc">Slow scale pulse. Collectibles, rewards, highlighted items.</span>
+      </div>
+      <div class="anim-card">
+        <span class="anim-icon">✨</span>
+        <span class="anim-name">float</span>
+        <span class="anim-desc">Gentle up-down bob. Magical items, seeds, ethereal objects.</span>
+      </div>
+      <div class="anim-card">
+        <span class="anim-icon">💫</span>
+        <span class="anim-name">glow</span>
+        <span class="anim-desc">Opacity and brightness pulse. Hidden objects, rare finds.</span>
+      </div>
+      <div class="anim-card">
+        <span class="anim-icon">🪨</span>
+        <span class="anim-name">none</span>
+        <span class="anim-desc">Static. Buildings, fixed structures, background elements.</span>
+      </div>
+    </div>
+    <p>Animations are pure CSS keyframes. The game engine applies the same class names (<code>anim-sway</code>, <code>anim-jitter</code>, etc.) to replicate the effect.</p>
+
+    <h3 id="obj-collision">Collision & Trigger Radius</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Property</th><th>Options / Range</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Collision</td><td>walkable / solid / interact_only</td><td><strong>walkable</strong>: player passes through freely. <strong>solid</strong>: blocks player movement. <strong>interact_only</strong>: no physical blocking but interaction is available when in range.</td></tr>
+          <tr><td>Trigger Radius</td><td>1–30%</td><td>How close the player must be (as a % of map width) to trigger this object's interactions. Smaller = must be right next to it. Larger = activates from further away.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="json">
+    <h2><span class="section-num">07 — JSON Tab</span>Previewing World Data</h2>
+    <p>The JSON tab shows a live preview of your complete <code>world.json</code>. Base64 image and audio data is replaced with a placeholder in the preview (<code>[base64 image — included in export]</code>) to keep it readable, but the actual exported file contains all data.</p>
+
+    <h4>Toolbar</h4>
+    <ul>
+      <li><strong>Copy</strong> — copies the full JSON (with base64) to your clipboard</li>
+      <li><strong>Download</strong> — downloads as <code>world.json</code></li>
+    </ul>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="schema">
+    <h2><span class="section-num">08 — Schema</span>world.json Structure</h2>
+    <p>The complete world is a single JSON object with four top-level keys:</p>
+
+    <div class="schema-block">
+      <span class="sk">"meta"</span><span class="st">: { title, version, created }</span><span class="sc">  // world metadata</span><br>
+      <span class="sk">"maps"</span><span class="st">: [ Map, ... ]</span><span class="sc">              // all map definitions</span><br>
+      <span class="sk">"entities"</span><span class="st">: [ Entity, ... ]</span><span class="sc">          // entity library</span><br>
+      <span class="sk">"dialogs"</span><span class="st">: [ Dialog, ... ]</span><span class="sc">           // dialog trees (created on demand)</span>
+    </div>
+
+    <h3>Map Object</h3>
+    <div class="schema-block">
+      {<br>
+      &nbsp;&nbsp;<span class="sk">"id"</span>: <span class="sv">"map_1"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"name"</span>: <span class="sv">"Abandoned Corner Lot"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"type"</span>: <span class="sv">"top-down"</span>, <span class="sc">// or "side-view"</span><br>
+      &nbsp;&nbsp;<span class="sk">"zone"</span>: <span class="sv">6</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"blight_level"</span>: <span class="sv">80</span>, <span class="sc">// 0–100</span><br>
+      &nbsp;&nbsp;<span class="sk">"description"</span>: <span class="sv">"..."</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"background"</span>: <span class="sv">"data:image/png;base64,..."</span>, <span class="sc">// or null</span><br>
+      &nbsp;&nbsp;<span class="sk">"portals"</span>: [ { id, to, label, requires_level, x, y } ],<br>
+      &nbsp;&nbsp;<span class="sk">"objects"</span>: [ PlacedObject, ... ]<br>
+      }
+    </div>
+
+    <h3>PlacedObject</h3>
+    <div class="schema-block">
+      {<br>
+      &nbsp;&nbsp;<span class="sk">"id"</span>: <span class="sv">"obj_1"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"entity_id"</span>: <span class="sv">"entity_3"</span>, <span class="sc">// references entity library</span><br>
+      &nbsp;&nbsp;<span class="sk">"label"</span>: <span class="sv">""</span>, <span class="sc">// override display name, or blank</span><br>
+      &nbsp;&nbsp;<span class="sk">"x"</span>: <span class="sv">0.35</span>, <span class="sc">// 0.0–1.0 (fraction of map width)</span><br>
+      &nbsp;&nbsp;<span class="sk">"y"</span>: <span class="sv">0.6</span>, <span class="sc">// 0.0–1.0 (fraction of map height)</span><br>
+      &nbsp;&nbsp;<span class="sk">"size"</span>: <span class="sv">48</span>, <span class="sc">// pixels</span><br>
+      &nbsp;&nbsp;<span class="sk">"z_order"</span>: <span class="sv">10</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"rotation"</span>: <span class="sv">0</span>, <span class="sc">// degrees</span><br>
+      &nbsp;&nbsp;<span class="sk">"animation"</span>: <span class="sv">"sway"</span>, <span class="sc">// none|sway|jitter|pop|float|glow</span><br>
+      &nbsp;&nbsp;<span class="sk">"collision"</span>: <span class="sv">"walkable"</span>, <span class="sc">// walkable|solid|interact_only</span><br>
+      &nbsp;&nbsp;<span class="sk">"trigger_radius"</span>: <span class="sv">8</span>, <span class="sc">// % of map width</span><br>
+      &nbsp;&nbsp;<span class="sk">"state"</span>: <span class="sv">"idle"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"notes"</span>: <span class="sv">""</span><br>
+      &nbsp;&nbsp;<span class="sc">// portal objects also have: type, portal_id</span><br>
+      }
+    </div>
+
+    <h3>Entity Object</h3>
+    <div class="schema-block">
+      {<br>
+      &nbsp;&nbsp;<span class="sk">"id"</span>: <span class="sv">"entity_1"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"name"</span>: <span class="sv">"Rusty Watering Can"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"category"</span>: <span class="sv">"tool"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"rarity"</span>: <span class="sv">"common"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"description"</span>: <span class="sv">"..."</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"sprite"</span>: <span class="sv">"data:image/png;base64,..."</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"zone_requirements"</span>: [<span class="sv">3</span>, <span class="sv">4</span>, <span class="sv">5</span>], <span class="sc">// [] = any zone</span><br>
+      &nbsp;&nbsp;<span class="sk">"effect"</span>: <span class="sv">"speeds_growth"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"grow_time_hours"</span>: <span class="sv">24</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"growth_speed_multiplier"</span>: <span class="sv">1.0</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"collectible"</span>: <span class="sv">true</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"interactable"</span>: <span class="sv">true</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"hidden"</span>: <span class="sv">false</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"tradeable"</span>: <span class="sv">true</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"respawn"</span>: <span class="sv">true</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"respawn_hours"</span>: <span class="sv">24</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"ambient_sound"</span>: <span class="sv">"data:audio/mp3;base64,..."</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"place_requires"</span>: [<span class="sv">"entity_2"</span>],<br>
+      &nbsp;&nbsp;<span class="sk">"states"</span>: [{ id, label }, ...],<br>
+      &nbsp;&nbsp;<span class="sk">"interactions"</span>: [ Interaction, ... ]<br>
+      }
+    </div>
+
+    <h3>Interaction Object</h3>
+    <div class="schema-block">
+      {<br>
+      &nbsp;&nbsp;<span class="sk">"trigger"</span>: <span class="sv">"harvest"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"action"</span>: <span class="sv">"reward"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"reward"</span>: <span class="sv">"tomato"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"requires_entity_id"</span>: <span class="sv">"entity_2"</span>, <span class="sc">// tool needed</span><br>
+      &nbsp;&nbsp;<span class="sk">"sound"</span>: <span class="sv">"data:audio/mp3;base64,..."</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"dialog_id"</span>: <span class="sv">"dlg_001"</span> <span class="sc">// if action is "dialog"</span><br>
+      }
+    </div>
+
+    <h3>Dialog Object</h3>
+    <div class="schema-block">
+      {<br>
+      &nbsp;&nbsp;<span class="sk">"id"</span>: <span class="sv">"dlg_001"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"name"</span>: <span class="sv">"Gardener dialog"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"start_node"</span>: <span class="sv">"node_start"</span>,<br>
+      &nbsp;&nbsp;<span class="sk">"nodes"</span>: [<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;{<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sk">"id"</span>: <span class="sv">"node_start"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sk">"speaker"</span>: <span class="sv">"Old Gardener"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sk">"text"</span>: <span class="sv">"You found my trowel!"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sk">"x"</span>: <span class="sv">40</span>, <span class="sk">"y"</span>: <span class="sv">40</span>, <span class="sc">// canvas position</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sk">"choices"</span>: [<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="sk">"id"</span>: <span class="sv">"c1"</span>, <span class="sk">"text"</span>: <span class="sv">"Here you go"</span>, <span class="sk">"next"</span>: <span class="sv">"node_thanks"</span>, <span class="sk">"reward"</span>: <span class="sv">""</span> },<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="sk">"id"</span>: <span class="sv">"c2"</span>, <span class="sk">"text"</span>: <span class="sv">"What's it worth?"</span>, <span class="sk">"next"</span>: <span class="sv">"node_trade"</span>, <span class="sk">"reward"</span>: <span class="sv">""</span> }<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;]<br>
+      }
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="export-import">
+    <h2><span class="section-num">09 — Export & Import</span>Saving and Loading Your World</h2>
+
+    <h3>Auto-Save</h3>
+    <p>Every change is automatically saved to your browser's localStorage. This persists across page refreshes and browser restarts — but only in the same browser on the same device.</p>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠</div>
+      <div>localStorage can be cleared by browser settings, private browsing sessions, or clearing site data. Always export a <code>world.json</code> file after significant work.</div>
+    </div>
+
+    <h3>Exporting</h3>
+    <p>Click <strong>Export JSON</strong> in the header at any time. This downloads <code>world.json</code> with all data including full base64 images and audio. Place this file in your project's <code>data/</code> folder for the game engine to read.</p>
+
+    <h3>Importing</h3>
+    <p>Click <strong>Import</strong> in the header and select a <code>world.json</code> file. This replaces all current data. The file must have both <code>maps</code> and <code>entities</code> arrays at the top level.</p>
+
+    <h3>Deploying to GitHub Pages</h3>
+    <ol>
+      <li>Place <code>editor/index.html</code> in your repository</li>
+      <li>Place your exported <code>world.json</code> in <code>data/world.json</code></li>
+      <li>Enable GitHub Pages from the repository settings (source: main branch, root or /docs)</li>
+      <li>The editor is accessible at <code>https://yourusername.github.io/yourrepo/editor/</code></li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="categories">
+    <h2><span class="section-num">10 — Reference</span>Entity Categories</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Category</th><th>Icon</th><th>Description</th><th>Typical Use</th></tr></thead>
+        <tbody>
+          <tr><td><code>tool</code></td><td>🛠</td><td>Collectible equipment used to interact with other entities</td><td>Trowel, watering can, gloves, seed packets</td></tr>
+          <tr><td><code>plant</code></td><td>🌿</td><td>Living things that grow over time through states</td><td>Wildflowers, vegetables, shrubs, trees</td></tr>
+          <tr><td><code>building</code></td><td>🏚</td><td>Structures that can be restored and provide benefits</td><td>Shed, greenhouse, compost bin, rain barrel</td></tr>
+          <tr><td><code>creature</code></td><td>🐝</td><td>Animals attracted by plants or improvements</td><td>Bee, butterfly, earthworm, robin</td></tr>
+          <tr><td><code>hidden_object</code></td><td>🔍</td><td>Items invisible until discovered through exploration</td><td>Lost keys, buried coins, forgotten seeds</td></tr>
+          <tr><td><code>portal</code></td><td>🚪</td><td>Transition points to other maps</td><td>Door, gate, path, ladder, trapdoor</td></tr>
+          <tr><td><code>decoration</code></td><td>🪨</td><td>Purely visual elements that add atmosphere</td><td>Rocks, fences, signage, puddles</td></tr>
+          <tr><td><code>hazard</code></td><td>⚠</td><td>Obstacles that must be cleared before planting</td><td>Litter piles, pollution sources, invasive weeds</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="effects">
+    <h2><span class="section-num">11 — Reference</span>Effects</h2>
+    <p>The <strong>Effect</strong> field on an entity defines its passive impact on the game world when placed. The game engine reads this to calculate gameplay outcomes.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Effect</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>speeds_growth</code></td><td>Reduces grow time of nearby plants</td></tr>
+          <tr><td><code>slows_blight</code></td><td>Reduces the rate at which the map's blight level increases</td></tr>
+          <tr><td><code>restores_soil</code></td><td>Actively reduces blight level over time</td></tr>
+          <tr><td><code>attracts_creatures</code></td><td>Increases chance of creature entities spawning nearby</td></tr>
+          <tr><td><code>provides_shelter</code></td><td>Allows cold-zone plants to survive in adjacent areas</td></tr>
+          <tr><td><code>reveals_hidden</code></td><td>Makes hidden_object entities in trigger radius discoverable</td></tr>
+          <tr><td><code>blocks_hazard</code></td><td>Prevents hazards from spreading into adjacent areas</td></tr>
+          <tr><td><code>generates_seeds</code></td><td>Periodically produces seed items for the player to collect</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="zones">
+    <h2><span class="section-num">12 — Reference</span>Climate Zones</h2>
+    <p>Verdure uses the 12 USDA Plant Hardiness Zones as its geography system. Each map has a zone and each entity can restrict which zones it's available in.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Zone</th><th>Climate</th><th>Examples</th></tr></thead>
+        <tbody>
+          <tr><td>1–2</td><td>Subarctic / Alpine</td><td>Northern Canada, Alaska high elevations</td></tr>
+          <tr><td>3–4</td><td>Cold continental</td><td>Montana, Minnesota, Northern New England</td></tr>
+          <tr><td>5–6</td><td>Temperate</td><td>Chicago, Denver, most of the Midwest</td></tr>
+          <tr><td>7–8</td><td>Mild temperate</td><td>Pacific Northwest, Virginia, Tennessee</td></tr>
+          <tr><td>9–10</td><td>Subtropical / Mediterranean</td><td>Los Angeles, Phoenix, Gulf Coast</td></tr>
+          <tr><td>11–12</td><td>Tropical</td><td>South Florida, Hawaii, Puerto Rico</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Zone restrictions on entities create natural asymmetry — a Zone 9 player can grow a Saguaro Cactus that a Zone 3 player cannot. This incentivises trading between players in different regions.</p>
+  </section>
+
+  <!-- ════════════════════════════════════════ -->
+  <section class="section" id="workflow">
+    <h2><span class="section-num">13 — Reference</span>Recommended Workflow</h2>
+    <p>For efficient world-building, follow this order:</p>
+    <ol class="steps">
+      <li><div><strong>Define your entity library first</strong> — You can't place entities that don't exist yet. Build out tools, plants, hazards, portals, and any hidden objects before working on maps.</div></li>
+      <li><div><strong>Create maps in logical order</strong> — Start with the "entry" map a player first sees. Then create connected maps (rooms, rooftops, sheds) and link them via portals.</div></li>
+      <li><div><strong>Upload backgrounds before placing objects</strong> — It's much easier to position objects accurately when you can see where they should sit in the scene.</div></li>
+      <li><div><strong>Use blight level intentionally</strong> — High blight (75–100) = lots of hazards to clear, few plants possible. Low blight (0–25) = a flourishing space. Set this to match the visual state of your background image.</div></li>
+      <li><div><strong>Add interactions and dialogs last</strong> — Get the world looking right first. Layer in gameplay mechanics (interactions, dialog trees, required tools) once the visual layout is solid.</div></li>
+      <li><div><strong>Export frequently</strong> — localStorage is convenient but not permanent. Export a <code>world.json</code> at the end of every working session.</div></li>
+      <li><div><strong>Version your JSON</strong> — Commit <code>world.json</code> to your GitHub repository after each significant session. This gives you a full history and makes it easy to roll back mistakes.</div></li>
+    </ol>
+
+    <div class="callout tip">
+      <div class="callout-icon">🌱</div>
+      <div>The editor is designed to grow alongside your game. Start with a small, complete world — two or three connected maps with a handful of entities — and expand it incrementally. A focused small world is more fun to design than an incomplete large one.</div>
+    </div>
+  </section>
+
+  <hr>
+
+  <div style="text-align:center;padding:20px 0 40px;font-family:var(--font-mono);font-size:0.72rem;color:var(--dim)">
+    Verdure World Editor · Help v0.1 · Built with 🌿
+  </div>
+
+</main>
+</body>
+</html>
