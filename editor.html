@@ -1,0 +1,2978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verdure — World Editor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+</style>
+<style>
+  :root {
+    --soil:       #2a1f14;
+    --bark:       #3d2b1a;
+    --moss:       #4a5e3a;
+    --leaf:       #6b8f4e;
+    --sprout:     #9bbf73;
+    --bloom:      #c8e6a0;
+    --petal:      #e8f5d0;
+    --rust:       #b05c2a;
+    --amber:      #d4892a;
+    --fog:        #c2c9b8;
+    --concrete:   #8a9080;
+    --blight:     #4a4a42;
+
+    --panel-bg:   #1e1a14;
+    --panel-mid:  #252018;
+    --panel-edge: #2e2820;
+    --border:     #3d3828;
+    --text-main:  #d8cdb8;
+    --text-dim:   #8a8070;
+    --text-bright:#eee8d8;
+
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body:    'DM Sans', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+
+    --radius: 4px;
+    --transition: 0.18s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--soil);
+    color: var(--text-main);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    color: var(--sprout);
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo span { color: var(--text-dim); font-size: 0.75rem; font-family: var(--font-mono); font-style: italic; letter-spacing: 0.08em; }
+
+  .header-tabs {
+    display: flex;
+    gap: 2px;
+  }
+  .htab {
+    padding: 6px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .htab:hover { color: var(--text-main); background: var(--panel-mid); }
+  .htab.active { color: var(--sprout); background: var(--panel-mid); border-color: var(--border); }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  .btn {
+    padding: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid var(--border);
+    background: var(--panel-mid);
+    color: var(--text-main);
+  }
+  .btn:hover { background: var(--panel-edge); color: var(--text-bright); border-color: var(--moss); }
+  .btn.primary { background: var(--moss); border-color: var(--leaf); color: var(--petal); }
+  .btn.primary:hover { background: var(--leaf); }
+  .btn.danger { border-color: var(--rust); color: var(--rust); }
+  .btn.danger:hover { background: var(--rust); color: var(--petal); }
+
+  /* ── MAIN LAYOUT ── */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── LEFT SIDEBAR ── */
+  .sidebar-left {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .list-scroll { overflow-y: auto; flex: 1; }
+  .list-scroll::-webkit-scrollbar { width: 4px; }
+  .list-scroll::-webkit-scrollbar-track { background: transparent; }
+  .list-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+    transition: var(--transition);
+    font-size: 0.85rem;
+  }
+  .list-item:hover { background: var(--panel-mid); }
+  .list-item.active { background: var(--panel-edge); border-left: 2px solid var(--leaf); color: var(--text-bright); }
+  .list-item .item-icon { font-size: 1rem; flex-shrink: 0; }
+  .list-item .item-info { flex: 1; overflow: hidden; }
+  .list-item .item-name { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-item .item-meta { font-size: 0.68rem; color: var(--text-dim); font-family: var(--font-mono); }
+
+  /* ── CANVAS AREA ── */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--blight);
+    position: relative;
+  }
+
+  .canvas-toolbar {
+    height: 40px;
+    background: var(--panel-mid);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .tool-btn {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-dim);
+    transition: var(--transition);
+  }
+  .tool-btn:hover { background: var(--panel-edge); color: var(--text-main); }
+  .tool-btn.active { background: var(--panel-edge); border-color: var(--leaf); color: var(--sprout); }
+
+  .tool-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+  .canvas-wrap {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+  }
+  .canvas-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .canvas-wrap::-webkit-scrollbar-track { background: var(--blight); }
+  .canvas-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  #mapCanvas {
+    position: relative;
+    border: 2px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: crosshair;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+
+  #mapBg {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  #mapBgPlaceholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--blight) 0px, var(--blight) 10px,
+      #424238 10px, #424238 20px
+    );
+  }
+  #mapBgPlaceholder .big-icon { font-size: 3rem; opacity: 0.3; }
+
+  .placed-object {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2px;
+    transition: filter 0.1s;
+  }
+  .placed-object:hover { filter: brightness(1.25); }
+  .placed-object.selected .obj-icon { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 4px; }
+  .placed-object.selected .obj-sprite { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 4px; }
+  .obj-icon {
+    background: var(--panel-bg);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+  .obj-sprite {
+    display: block;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+  }
+  .obj-label {
+    font-size: 0.6rem;
+    font-family: var(--font-mono);
+    background: rgba(0,0,0,0.7);
+    color: var(--bloom);
+    padding: 1px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .canvas-empty-state {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    pointer-events: none;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  /* ── RIGHT SIDEBAR ── */
+  .sidebar-right {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .props-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .props-body { padding: 12px 14px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+  .props-body::-webkit-scrollbar { width: 4px; }
+  .props-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 0.67rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .field-input {
+    background: var(--panel-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    outline: none;
+    transition: var(--transition);
+    width: 100%;
+  }
+  .field-input:focus { border-color: var(--leaf); color: var(--text-bright); }
+  select.field-input { cursor: pointer; }
+  textarea.field-input { resize: vertical; min-height: 60px; font-family: var(--font-mono); font-size: 0.75rem; }
+
+  .field-row { display: flex; gap: 8px; }
+  .field-row .field-group { flex: 1; }
+
+  .zone-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+  }
+  .zone-chip {
+    padding: 4px 2px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--panel-mid);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .zone-chip:hover { border-color: var(--leaf); color: var(--text-main); }
+  .zone-chip.active { background: var(--moss); border-color: var(--leaf); color: var(--petal); }
+
+  .color-swatch {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .swatch:hover, .swatch.active { border-color: var(--text-bright); transform: scale(1.15); }
+
+  .props-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+
+  /* ── ENTITY EDITOR TAB ── */
+  .entity-workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .entity-library {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .entity-form {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 20px;
+    overflow-y: scroll;
+    display: block;
+  }
+  .entity-form > * + * { margin-top: 16px; }
+  .entity-form::-webkit-scrollbar { width: 6px; }
+  .entity-form::-webkit-scrollbar-track { background: var(--blight); }
+  .entity-form::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .form-section {
+    background: var(--panel-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .form-section-header {
+    padding: 8px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--panel-edge);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .form-section-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+  .states-list { display: flex; flex-direction: column; gap: 6px; }
+  .state-row {
+    display: flex; gap: 6px; align-items: center;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+  }
+  .state-row .field-input { flex: 1; }
+
+  .interactions-list { display: flex; flex-direction: column; gap: 6px; }
+  .interaction-row {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .interaction-row-top { display: flex; gap: 6px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes verdure-sway {
+    0%,100% { transform: translate(-50%,-50%) rotate(-4deg); }
+    50%      { transform: translate(-50%,-50%) rotate(4deg); }
+  }
+  @keyframes verdure-jitter {
+    0%,100% { transform: translate(-50%,-50%) translate(0,0); }
+    25%     { transform: translate(-50%,-50%) translate(-2px,1px); }
+    50%     { transform: translate(-50%,-50%) translate(2px,-1px); }
+    75%     { transform: translate(-50%,-50%) translate(-1px,2px); }
+  }
+  @keyframes verdure-pop {
+    0%,100% { transform: translate(-50%,-50%) scale(1); }
+    50%     { transform: translate(-50%,-50%) scale(1.12); }
+  }
+  @keyframes verdure-float {
+    0%,100% { transform: translate(-50%,-50%) translateY(0); }
+    50%     { transform: translate(-50%,-50%) translateY(-6px); }
+  }
+  @keyframes verdure-glow {
+    0%,100% { opacity: 1; filter: brightness(1); }
+    50%     { opacity: 0.6; filter: brightness(1.6); }
+  }
+  .anim-sway  { animation: verdure-sway  3s ease-in-out infinite; }
+  .anim-jitter{ animation: verdure-jitter 0.3s linear infinite; }
+  .anim-pop   { animation: verdure-pop   1.8s ease-in-out infinite; }
+  .anim-float { animation: verdure-float 2.5s ease-in-out infinite; }
+  .anim-glow  { animation: verdure-glow  2s ease-in-out infinite; }
+
+  /* ── DIALOG EDITOR ── */
+  .dialog-canvas {
+    flex: 1; overflow: auto; position: relative;
+    background: var(--blight);
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+    min-height: 400px;
+  }
+  .dialog-node {
+    position: absolute;
+    width: 220px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    cursor: move;
+    user-select: none;
+  }
+  .dialog-node.selected { border-color: var(--leaf); }
+  .dialog-node.start-node { border-color: var(--amber); }
+  .dialog-node-header {
+    padding: 6px 10px;
+    background: var(--panel-edge);
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono); font-size: 0.65rem;
+    letter-spacing: 0.08em; color: var(--text-dim);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .dialog-node-header.start { color: var(--amber); }
+  .dialog-node-body { padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .dialog-node-speaker {
+    font-family: var(--font-mono); font-size: 0.7rem;
+    color: var(--sprout); font-style: italic;
+  }
+  .dialog-node-text {
+    font-size: 0.78rem; color: var(--text-main); line-height: 1.4;
+  }
+  .dialog-node-choices { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .dialog-choice-chip {
+    font-size: 0.68rem; padding: 3px 8px;
+    background: var(--panel-mid); border: 1px solid var(--border);
+    border-radius: 2px; color: var(--text-dim);
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: var(--transition);
+  }
+  .dialog-choice-chip:hover { border-color: var(--leaf); color: var(--text-main); }
+  .dialog-choice-chip .choice-arrow { color: var(--amber); font-size: 0.6rem; }
+  .dialog-toolbar {
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center;
+    background: var(--panel-mid); flex-shrink: 0;
+  }
+  .dialog-workspace {
+    display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0;
+  }
+  .dialog-node-edit {
+    width: 280px; flex-shrink: 0;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .dialog-edit-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 0.65rem;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .dialog-edit-body {
+    flex: 1; overflow-y: auto; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .dialog-edit-body::-webkit-scrollbar { width: 4px; }
+  .dialog-edit-body::-webkit-scrollbar-thumb { background: var(--border); }
+  .dialog-main-area { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  .choice-edit-row {
+    background: var(--panel-mid); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .svg-connections {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; overflow: visible;
+  }
+
+
+  .json-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 20px;
+    gap: 12px;
+  }
+  .json-toolbar { display: flex; gap: 8px; align-items: center; }
+  .json-pane {
+    flex: 1;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--sprout);
+    white-space: pre;
+  }
+  .json-pane::-webkit-scrollbar { width: 6px; }
+  .json-pane::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .json-key { color: var(--amber); }
+  .json-str { color: var(--sprout); }
+  .json-num { color: var(--rust); }
+  .json-bool { color: var(--fog); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,8,5,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(12px);
+    transition: transform 0.2s;
+  }
+  .modal.modal-fullscreen {
+    width: 96vw;
+    height: 92vh;
+    max-height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal.modal-fullscreen .modal-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+    min-height: 0;
+  }
+  .modal.modal-fullscreen .dialog-workspace {
+    height: 100%;
+  }
+  .modal.modal-fullscreen .dialog-main-area {
+    flex: 1;
+    min-height: 0;
+  }
+  .modal.modal-fullscreen .dialog-canvas {
+    flex: 1;
+    min-height: 0;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-title { font-family: var(--font-display); font-size: 1.1rem; color: var(--text-bright); }
+  .modal-close { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1.2rem; transition: var(--transition); }
+  .modal-close:hover { color: var(--text-bright); }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: var(--moss);
+    color: var(--petal);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    z-index: 2000;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; color: var(--text-dim);
+    font-family: var(--font-mono); font-size: 0.8rem;
+    text-align: center; padding: 20px;
+  }
+  .empty-state .es-icon { font-size: 2.5rem; opacity: 0.3; }
+
+  .sprite-upload-area {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .sprite-preview {
+    width: 64px; height: 64px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--panel-mid);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+  }
+  .sprite-preview:hover { border-color: var(--leaf); }
+  .sprite-preview img { width: 100%; height: 100%; object-fit: contain; }
+  .sprite-preview .sprite-hint {
+    position: absolute; bottom: 2px; left: 0; right: 0;
+    text-align: center; font-size: 0.55rem;
+    font-family: var(--font-mono); color: var(--text-dim);
+    background: rgba(0,0,0,0.5); padding: 1px;
+  }
+  .sprite-controls { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+
+  .tag {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    background: var(--panel-edge);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .tag:hover, .tag.active { background: var(--moss); border-color: var(--leaf); color: var(--petal); }
+
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── CATEGORY ICONS ── */
+  .cat-icon { font-size: 1.1rem; }
+
+  /* Scrollbars global */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+  /* Checkbox */
+  .check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .check-row input[type=checkbox] { accent-color: var(--leaf); width: 14px; height: 14px; cursor: pointer; }
+  .check-row span { font-size: 0.82rem; color: var(--text-main); }
+
+  .portal-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--panel-edge); border: 1px solid var(--border);
+    border-radius: 10px; padding: 2px 8px;
+    font-family: var(--font-mono); font-size: 0.68rem; color: var(--amber);
+  }
+
+  /* ── MASK STYLES ── */
+  .mask-polygon { cursor: pointer; transition: opacity 0.15s; }
+  .mask-polygon:hover { opacity: 0.85 !important; }
+  .mask-polygon.selected { stroke-width: 2.5 !important; }
+  .mask-point {
+    cursor: move;
+    transition: r 0.1s;
+  }
+  .mask-point:hover { r: 7; }
+  .mask-drawing-hint {
+    position: absolute; bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.75);
+    color: var(--bloom);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 4px 14px;
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 60;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    🌿 Verdure <span>world editor v0.1</span>
+  </div>
+  <div class="header-tabs">
+    <button class="htab active" onclick="switchTab('maps')">Maps</button>
+    <button class="htab" onclick="switchTab('entities')">Entities</button>
+    <button class="htab" onclick="switchTab('json')">JSON</button>
+  </div>
+  <div class="header-actions">
+    <button class="btn" onclick="importWorld()">Import</button>
+    <button class="btn primary" onclick="exportWorld()">Export JSON</button>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace" id="mapsTab">
+
+  <!-- LEFT: map list -->
+  <div class="sidebar-left">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Maps</div>
+      <button class="btn primary" style="width:100%" onclick="openNewMapModal()">+ New Map</button>
+    </div>
+    <div class="list-scroll" id="mapList"></div>
+  </div>
+
+  <!-- CENTER: canvas -->
+  <div class="canvas-area">
+    <div class="canvas-toolbar">
+      <button class="tool-btn active" id="toolSelect" title="Select" onclick="setTool('select')">↖</button>
+      <button class="tool-btn" id="toolPlace" title="Place Object" onclick="setTool('place')">＋</button>
+      <button class="tool-btn" id="toolPortal" title="Add Portal" onclick="setTool('portal')">🚪</button>
+      <button class="tool-btn" id="toolMask" title="Draw Mask Polygon" onclick="setTool('mask')">⬡</button>
+      <div class="tool-sep"></div>
+      <button class="tool-btn" title="Upload Background" onclick="triggerBgUpload()">🖼</button>
+      <button class="tool-btn" title="Clear Background" onclick="clearBg()">✕</button>
+      <div class="tool-sep"></div>
+      <button class="tool-btn" id="toolMaskVis" title="Toggle mask visibility" onclick="toggleMaskVisibility()" style="font-size:0.65rem;letter-spacing:0">MSK</button>
+      <div class="tool-sep"></div>
+      <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-dim);margin-left:4px" id="canvasInfo">No map selected</span>
+    </div>
+    <div class="canvas-wrap" id="canvasWrap">
+      <div class="canvas-empty-state" id="canvasEmptyState">
+        Select or create a map to begin
+      </div>
+      <div id="mapCanvas" style="display:none;width:800px;height:540px;">
+        <img id="mapBg" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;">
+        <div id="mapBgPlaceholder" style="position:absolute;inset:0;" class="">
+          <div class="big-icon">🌱</div>
+          <div>Upload a background image</div>
+          <div style="font-size:0.7rem;opacity:0.6">or leave blank for now</div>
+        </div>
+        <svg id="maskLayer" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:50"></svg>
+        <canvas id="maskDrawCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:51;display:none"></canvas>
+        <div id="placedObjects"></div>
+      </div>
+    </div>
+    <input type="file" id="bgFileInput" accept="image/*" style="display:none" onchange="loadBgImage(event)">
+  </div>
+
+  <!-- RIGHT: properties -->
+  <div class="sidebar-right">
+    <div class="props-header">Properties</div>
+    <div class="props-body" id="propsBody">
+      <div class="empty-state">
+        <div class="es-icon">🗺</div>
+        <div>Select a map or<br>placed object to edit</div>
+      </div>
+    </div>
+    <div class="props-footer" id="propsFooter" style="display:none">
+      <button class="btn danger" style="flex:1" onclick="deleteSelected()">Delete</button>
+      <button class="btn primary" style="flex:2" onclick="applyProps()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENTITY TAB -->
+<div class="workspace" id="entitiesTab" style="display:none">
+  <div class="entity-library">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Entity Library</div>
+      <button class="btn primary" style="width:100%" onclick="openNewEntityModal()">+ New Entity</button>
+    </div>
+    <div style="padding:8px 14px;border-bottom:1px solid var(--border)">
+      <div class="tag-list" id="categoryFilter">
+        <div class="tag active" onclick="filterCategory('all',this)">All</div>
+        <div class="tag" onclick="filterCategory('tool',this)">🛠 Tool</div>
+        <div class="tag" onclick="filterCategory('plant',this)">🌿 Plant</div>
+        <div class="tag" onclick="filterCategory('building',this)">🏚 Building</div>
+        <div class="tag" onclick="filterCategory('creature',this)">🐝 Creature</div>
+        <div class="tag" onclick="filterCategory('hidden_object',this)">🔍 Hidden</div>
+        <div class="tag" onclick="filterCategory('portal',this)">🚪 Portal</div>
+        <div class="tag" onclick="filterCategory('decoration',this)">🪨 Decor</div>
+        <div class="tag" onclick="filterCategory('hazard',this)">⚠ Hazard</div>
+      </div>
+    </div>
+    <div class="list-scroll" id="entityList"></div>
+  </div>
+  <div class="entity-form" id="entityForm">
+    <div class="empty-state">
+      <div class="es-icon">🌾</div>
+      <div>Select an entity to edit<br>or create a new one</div>
+    </div>
+  </div>
+</div>
+
+<!-- JSON TAB -->
+<div class="workspace" id="jsonTab" style="display:none">
+  <div class="json-workspace">
+    <div class="json-toolbar">
+      <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">world.json preview</span>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="copyJson()">Copy</button>
+      <button class="btn primary" onclick="exportWorld()">Download</button>
+    </div>
+    <div class="json-pane" id="jsonPane"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Map</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let world = {
+  meta: { title: "Verdure World", version: "0.1", created: new Date().toISOString() },
+  maps: [],
+  entities: []
+};
+
+let activeMapId = null;
+let selectedObjectId = null;
+let activeTool = 'select';
+let currentCategoryFilter = 'all';
+let activeEntityId = null;
+
+const CATEGORY_ICONS = {
+  tool: '🛠', plant: '🌿', building: '🏚', creature: '🐝',
+  hidden_object: '🔍', portal: '🚪', decoration: '🪨', hazard: '⚠'
+};
+const RARITY_COLORS = { common:'#9bbf73', uncommon:'#6ab0de', rare:'#b07de0', legendary:'#e0a030' };
+const ZONE_COLORS = ['#7ec8e3','#6db88a','#8cc95a','#b8d44a','#d4c040','#e0a030','#d4762a','#c85030','#b83838','#a02880','#8840c0','#6038d0'];
+
+// ═══════════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════════
+function saveWorld() {
+  localStorage.setItem('verdure_world', JSON.stringify(world));
+}
+function loadWorld() {
+  const saved = localStorage.getItem('verdure_world');
+  if (saved) { try { world = JSON.parse(saved); } catch(e) {} }
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function switchTab(tab) {
+  ['maps','entities','json'].forEach(t => {
+    document.getElementById(t+'Tab').style.display = t === tab ? 'flex' : 'none';
+    document.querySelectorAll('.htab')[['maps','entities','json'].indexOf(t)].classList.toggle('active', t === tab);
+  });
+  if (tab === 'json') renderJson();
+}
+
+// ═══════════════════════════════════════════════════
+// MAP LIST
+// ═══════════════════════════════════════════════════
+function renderMapList() {
+  const el = document.getElementById('mapList');
+  if (!world.maps.length) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">🗺</div><div>No maps yet</div></div>`;
+    return;
+  }
+  el.innerHTML = world.maps.map(m => `
+    <div class="list-item ${m.id === activeMapId ? 'active' : ''}" onclick="selectMap('${m.id}')">
+      <div class="item-icon">${m.type === 'top-down' ? '🗺' : '🏠'}</div>
+      <div class="item-info">
+        <div class="item-name">${m.name}</div>
+        <div class="item-meta">Zone ${m.zone} · ${m.type} · ${(m.objects||[]).length} obj</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectMap(id) {
+  activeMapId = id;
+  selectedObjectId = null;
+  renderMapList();
+  renderCanvas();
+  renderMapProps();
+}
+
+// ═══════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════
+function renderCanvas() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const emptyState = document.getElementById('canvasEmptyState');
+  const canvas = document.getElementById('mapCanvas');
+
+  if (!map) {
+    emptyState.style.display = 'flex';
+    canvas.style.display = 'none';
+    document.getElementById('canvasInfo').textContent = 'No map selected';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  canvas.style.display = 'block';
+  document.getElementById('canvasInfo').textContent = `${map.name} · ${map.type} · Zone ${map.zone}`;
+
+  const bg = document.getElementById('mapBg');
+  const placeholder = document.getElementById('mapBgPlaceholder');
+  if (map.background) {
+    bg.src = map.background;
+    bg.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    bg.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  renderPlacedObjects();
+  renderMasks();
+}
+
+function renderPlacedObjects() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const container = document.getElementById('placedObjects');
+  if (!map) { container.innerHTML = ''; return; }
+
+  // Sort by z-order so higher z renders on top
+  const sorted = [...(map.objects || [])].sort((a, b) => (a.z_order||0) - (b.z_order||0));
+
+  container.innerHTML = sorted.map(obj => {
+    const entity = world.entities.find(e => e.id === obj.entity_id);
+    const size = obj.size || 48;
+    const zOrder = obj.z_order ?? 10;
+    const label = obj.label || entity?.name || obj.type || 'object';
+    const isSelected = obj.id === selectedObjectId;
+    const rotation = obj.rotation || 0;
+    const animClass = obj.animation && obj.animation !== 'none' ? `anim-${obj.animation}` : '';
+    const rotStyle = rotation ? `transform:translate(-50%,-50%) rotate(${rotation}deg)` : '';
+
+    let visual;
+    if (entity?.sprite) {
+      visual = `<img class="obj-sprite" src="${entity.sprite}"
+        style="width:${size}px;height:${size}px"
+        draggable="false">`;
+    } else {
+      const icon = entity ? (CATEGORY_ICONS[entity.category] || '📦') : (isPortalObj(obj) ? '🚪' : '📦');
+      visual = `<div class="obj-icon" style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.5)}px">${icon}</div>`;
+    }
+
+    return `
+      <div class="placed-object ${isSelected ? 'selected' : ''} ${animClass}"
+           style="left:${obj.x*100}%;top:${obj.y*100}%;z-index:${zOrder};${rotStyle}"
+           onclick="selectObject(event,'${obj.id}')"
+           onmousedown="startDrag(event,'${obj.id}')">
+        ${visual}
+        <div class="obj-label">${label}</div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('mapCanvas').addEventListener('click', function(e) {
+  if (activeTool === 'place' || activeTool === 'portal') {
+    const rect = this.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    if (activeTool === 'place') openPlaceObjectModal(x, y);
+    else if (activeTool === 'portal') addPortal(x, y);
+  }
+});
+
+function selectObject(e, id) {
+  e.stopPropagation();
+  if (activeTool !== 'select') return;
+  selectedObjectId = id;
+  renderPlacedObjects();
+  renderObjectProps();
+}
+
+document.getElementById('mapCanvas').addEventListener('click', function(e) {
+  if (e.target === this || e.target.id === 'mapBg' || e.target.id === 'mapBgPlaceholder') {
+    if (activeTool === 'select') {
+      selectedObjectId = null;
+      renderMapProps();
+      renderPlacedObjects();
+    }
+  }
+});
+
+// Drag
+let dragging = null, dragStartX, dragStartY, dragObjStartX, dragObjStartY;
+
+function startDrag(e, id) {
+  if (activeTool !== 'select') return;
+  e.stopPropagation();
+  dragging = id;
+  dragStartX = e.clientX; dragStartY = e.clientY;
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects || []).find(o => o.id === id);
+  if (obj) { dragObjStartX = obj.x; dragObjStartY = obj.y; }
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!dragging) return;
+  const canvas = document.getElementById('mapCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const dx = (e.clientX - dragStartX) / rect.width;
+  const dy = (e.clientY - dragStartY) / rect.height;
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects || []).find(o => o.id === dragging);
+  if (obj) {
+    obj.x = Math.max(0, Math.min(1, dragObjStartX + dx));
+    obj.y = Math.max(0, Math.min(1, dragObjStartY + dy));
+    renderPlacedObjects();
+  }
+}
+
+function onDragEnd() {
+  if (dragging) { saveWorld(); }
+  dragging = null;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+}
+
+// ═══════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════
+function setTool(tool) {
+  activeTool = tool;
+  ['select','place','portal','mask'].forEach(t => {
+    const btn = document.getElementById('tool' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === tool);
+  });
+  const canvas = document.getElementById('mapCanvas');
+  canvas.style.cursor = tool === 'select' ? 'default' : tool === 'mask' ? 'crosshair' : 'crosshair';
+  // Enable/disable mask draw canvas pointer events
+  const maskDraw = document.getElementById('maskDrawCanvas');
+  if (maskDraw) maskDraw.style.pointerEvents = tool === 'mask' ? 'all' : 'none';
+  // Show hint when mask tool active
+  const existing = document.getElementById('maskHint');
+  if (existing) existing.remove();
+  if (tool === 'mask') {
+    const hint = document.createElement('div');
+    hint.id = 'maskHint';
+    hint.className = 'mask-drawing-hint';
+    hint.textContent = 'Click to add points · Double-click to close polygon · ESC to cancel';
+    document.getElementById('mapCanvas').appendChild(hint);
+  }
+  if (tool !== 'mask') cancelMaskDraw();
+}
+
+// ═══════════════════════════════════════════════════
+// BACKGROUND
+// ═══════════════════════════════════════════════════
+function triggerBgUpload() {
+  if (!activeMapId) { showToast('Select a map first'); return; }
+  document.getElementById('bgFileInput').click();
+}
+
+function loadBgImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const map = world.maps.find(m => m.id === activeMapId);
+    if (map) { map.background = ev.target.result; saveWorld(); renderCanvas(); showToast('Background updated'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearBg() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (map) { map.background = null; saveWorld(); renderCanvas(); showToast('Background cleared'); }
+}
+
+// ═══════════════════════════════════════════════════
+// PROPERTIES PANEL
+// ═══════════════════════════════════════════════════
+function renderMapProps() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const body = document.getElementById('propsBody');
+  const footer = document.getElementById('propsFooter');
+
+  if (!map) {
+    body.innerHTML = `<div class="empty-state"><div class="es-icon">🗺</div><div>Select a map or placed object</div></div>`;
+    footer.style.display = 'none'; return;
+  }
+
+  footer.style.display = 'flex';
+  body.innerHTML = `
+    <div class="field-group">
+      <div class="field-label">Map Name</div>
+      <input class="field-input" id="pMapName" value="${map.name}">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Type</div>
+      <select class="field-input" id="pMapType">
+        <option value="top-down" ${map.type==='top-down'?'selected':''}>Top-down (outdoor)</option>
+        <option value="side-view" ${map.type==='side-view'?'selected':''}>Side-view (indoor)</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Climate Zone</div>
+      <div class="zone-grid">${[...Array(12)].map((_,i)=>`
+        <div class="zone-chip ${map.zone==i+1?'active':''}" onclick="selectZone(${i+1},this)" style="${map.zone==i+1?'border-color:'+ZONE_COLORS[i]:''}">${i+1}</div>
+      `).join('')}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Blight Level (0–100)</div>
+      <input class="field-input" id="pBlight" type="number" min="0" max="100" value="${map.blight_level||50}">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Description</div>
+      <textarea class="field-input" id="pMapDesc">${map.description||''}</textarea>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Portals (${(map.portals||[]).length})</div>
+      ${(map.portals||[]).map(p=>`
+        <div class="portal-badge">🚪 → ${world.maps.find(m=>m.id===p.to)?.name||p.to||'unlinked'}</div>
+      `).join(' ')||'<span style="font-size:0.78rem;color:var(--text-dim)">None yet — use portal tool</span>'}
+    </div>
+    <div class="field-group">
+      <div class="field-label">Objects (${(map.objects||[]).length})</div>
+      <span style="font-size:0.78rem;color:var(--text-dim)">Use Place tool to add objects</span>
+    </div>
+  `;
+}
+
+function buildPortalSection(map, obj) {
+  const portal = (map.portals||[]).find(p => p.id === obj.portal_id);
+  const otherMaps = world.maps.filter(m => m.id !== activeMapId);
+  const targetName = portal?.to ? world.maps.find(m => m.id === portal.to)?.name || 'unknown' : null;
+  const targetOptions = otherMaps.map(m =>
+    '<option value="' + m.id + '"' + (portal?.to === m.id ? ' selected' : '') + '>' +
+    (m.type === 'top-down' ? '🗺' : '🏠') + ' ' + m.name + '</option>'
+  ).join('');
+  const statusHtml = targetName
+    ? '<div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px">Currently → ' + targetName + '</div>'
+    : '<div style="font-size:0.7rem;color:var(--rust);margin-top:4px">⚠ Unlinked — select a target map</div>';
+  return `
+    <div class="field-group">
+      <div class="field-label">Portal Target Map</div>
+      <select class="field-input" id="pPortalTarget">
+        <option value="">— unlinked —</option>
+        ${targetOptions}
+      </select>
+      ${statusHtml}
+    </div>
+    <div class="field-group">
+      <div class="field-label">Requires Level</div>
+      <input class="field-input" id="pPortalLevel" type="number" min="0" value="${portal?.requires_level||0}">
+    </div>`;
+}
+
+function renderObjectProps() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects||[]).find(o => o.id === selectedObjectId);
+  const body = document.getElementById('propsBody');
+  const footer = document.getElementById('propsFooter');
+  if (!obj) { renderMapProps(); return; }
+
+  const entity = world.entities.find(e => e.id === obj.entity_id);
+  const isPortal = isPortalObj(obj);
+  footer.style.display = 'flex';
+
+  // Header preview
+  const previewHtml = entity?.sprite
+    ? `<img src="${entity.sprite}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;flex-shrink:0">`
+    : `<div style="font-size:1.6rem;flex-shrink:0">${isPortal ? '🚪' : entity ? CATEGORY_ICONS[entity.category]||'📦' : '📦'}</div>`;
+
+  // Portal target section — only shown for portal objects
+  const portalSection = isPortal ? buildPortalSection(map, obj) : '';
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--panel-mid);border-radius:var(--radius);border:1px solid var(--border)">
+      ${previewHtml}
+      <div>
+        <div style="font-size:0.85rem;color:var(--text-bright)">${entity?.name||obj.label||'Object'}</div>
+        <div style="font-size:0.7rem;color:var(--text-dim);font-family:var(--font-mono)">${isPortal?'portal':entity?.category||obj.type||'unknown'}</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Label Override</div>
+      <input class="field-input" id="pObjLabel" value="${obj.label||''}">
+    </div>
+    ${portalSection}
+    <div class="field-group">
+      <div class="field-label">State</div>
+      <select class="field-input" id="pObjState">
+        ${(entity?.states||[{id:'idle'}]).map(s=>`<option value="${s.id}" ${obj.state===s.id?'selected':''}>${s.id}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Size (px)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="pObjSizeRange" min="16" max="256" step="4" value="${obj.size||48}"
+          style="flex:1;accent-color:var(--leaf)"
+          oninput="document.getElementById('pObjSize').value=this.value;previewObjSize(this.value)">
+        <input class="field-input" id="pObjSize" type="number" min="16" max="256" step="4"
+          value="${obj.size||48}" style="width:64px"
+          oninput="document.getElementById('pObjSizeRange').value=this.value;previewObjSize(this.value)">
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Z-Order (depth layer)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="pObjZRange" min="1" max="100" step="1" value="${obj.z_order||10}"
+          style="flex:1;accent-color:var(--amber)"
+          oninput="document.getElementById('pObjZ').value=this.value">
+        <input class="field-input" id="pObjZ" type="number" min="1" max="100"
+          value="${obj.z_order||10}" style="width:64px"
+          oninput="document.getElementById('pObjZRange').value=this.value">
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-dim)">Higher = rendered on top of lower objects</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Rotation (degrees)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="pObjRotRange" min="0" max="360" step="1" value="${obj.rotation||0}"
+          style="flex:1;accent-color:var(--fog)"
+          oninput="document.getElementById('pObjRot').value=this.value;previewObjRotation(this.value)">
+        <input class="field-input" id="pObjRot" type="number" min="0" max="360"
+          value="${obj.rotation||0}" style="width:64px"
+          oninput="document.getElementById('pObjRotRange').value=this.value;previewObjRotation(this.value)">
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Animation</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${['none','sway','jitter','pop','float','glow'].map(a=>`
+          <div class="tag ${(obj.animation||'none')===a?'active':''}"
+               onclick="setObjAnimation('${a}',this)">${a}</div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Collision</div>
+      <select class="field-input" id="pObjCollision">
+        <option value="walkable" ${(obj.collision||'walkable')==='walkable'?'selected':''}>Walkable (passable)</option>
+        <option value="solid" ${obj.collision==='solid'?'selected':''}>Solid (blocks movement)</option>
+        <option value="interact_only" ${obj.collision==='interact_only'?'selected':''}>Interact only (no block)</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Trigger Radius (% of map width)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="pObjRadiusRange" min="1" max="30" step="1" value="${obj.trigger_radius||8}"
+          style="flex:1;accent-color:var(--sprout)"
+          oninput="document.getElementById('pObjRadius').value=this.value">
+        <input class="field-input" id="pObjRadius" type="number" min="1" max="30"
+          value="${obj.trigger_radius||8}" style="width:64px"
+          oninput="document.getElementById('pObjRadiusRange').value=this.value">
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-dim)">How close the player must be to trigger interactions</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Position</div>
+      <div class="field-row">
+        <div class="field-group"><div class="field-label">X %</div><input class="field-input" id="pObjX" type="number" step="0.001" min="0" max="1" value="${obj.x.toFixed(3)}"></div>
+        <div class="field-group"><div class="field-label">Y %</div><input class="field-input" id="pObjY" type="number" step="0.001" min="0" max="1" value="${obj.y.toFixed(3)}"></div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Notes</div>
+      <textarea class="field-input" id="pObjNotes">${obj.notes||''}</textarea>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim)">ID: ${obj.id}</div>
+  `;
+}
+
+function previewObjRotation(val) {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects||[]).find(o => o.id === selectedObjectId);
+  if (!obj) return;
+  obj.rotation = parseInt(val) || 0;
+  renderPlacedObjects();
+}
+
+function setObjAnimation(anim, el) {
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects||[]).find(o => o.id === selectedObjectId);
+  if (!obj) return;
+  obj.animation = anim;
+  document.querySelectorAll('#propsBody .tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderPlacedObjects();
+}
+
+function previewObjSize(val) {
+  // Live-update the selected object's size on canvas without full re-render
+  const map = world.maps.find(m => m.id === activeMapId);
+  const obj = (map?.objects||[]).find(o => o.id === selectedObjectId);
+  if (!obj) return;
+  obj.size = parseInt(val) || 48;
+  renderPlacedObjects();
+}
+
+function selectZone(z, el) {
+  document.querySelectorAll('.zone-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  el.dataset.selected = z;
+}
+
+function applyProps() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map) return;
+
+  if (selectedMaskId) {
+    const map = world.maps.find(m => m.id === activeMapId);
+    const mask = (map?.masks||[]).find(m => m.id === selectedMaskId);
+    if (mask) {
+      mask.type  = document.getElementById('pMaskType')?.value  || mask.type;
+      mask.label = document.getElementById('pMaskLabel')?.value || '';
+    }
+    saveWorld(); renderMasks(); showToast('Mask updated');
+    return;
+  } else if (selectedObjectId) {
+    const obj = (map.objects||[]).find(o => o.id === selectedObjectId);
+    if (obj) {
+      obj.label = document.getElementById('pObjLabel')?.value || '';
+      obj.state = document.getElementById('pObjState')?.value || 'idle';
+      obj.x = parseFloat(document.getElementById('pObjX')?.value ?? obj.x);
+      obj.y = parseFloat(document.getElementById('pObjY')?.value ?? obj.y);
+      obj.size = parseInt(document.getElementById('pObjSize')?.value) || 48;
+      obj.z_order = parseInt(document.getElementById('pObjZ')?.value) || 10;
+      obj.rotation = parseInt(document.getElementById('pObjRot')?.value) || 0;
+      obj.collision = document.getElementById('pObjCollision')?.value || 'walkable';
+      obj.trigger_radius = parseInt(document.getElementById('pObjRadius')?.value) || 8;
+      obj.notes = document.getElementById('pObjNotes')?.value || '';
+      // Portal target update
+      const isPortal = obj.type === 'portal';
+      const entity = world.entities.find(e => e.id === obj.entity_id);
+      if (isPortal || entity?.category === 'portal') {
+        const targetSelect = document.getElementById('pPortalTarget');
+        const levelInput = document.getElementById('pPortalLevel');
+        if (targetSelect && obj.portal_id) {
+          const portal = (map.portals||[]).find(p => p.id === obj.portal_id);
+          if (portal) {
+            portal.to = targetSelect.value || null;
+            portal.requires_level = parseInt(levelInput?.value) || 0;
+          }
+        }
+      }
+    }
+  } else {
+    map.name = document.getElementById('pMapName')?.value || map.name;
+    map.type = document.getElementById('pMapType')?.value || map.type;
+    map.blight_level = parseInt(document.getElementById('pBlight')?.value || map.blight_level);
+    map.description = document.getElementById('pMapDesc')?.value || '';
+    const activeZone = document.querySelector('.zone-chip.active');
+    if (activeZone) map.zone = parseInt(activeZone.textContent);
+  }
+
+  saveWorld();
+  renderMapList();
+  renderCanvas();
+  showToast('Saved');
+}
+
+function deleteSelected() {
+  const map = world.maps.find(m => m.id === activeMapId);
+  // Delete selected mask
+  if (selectedMaskId && map) {
+    if (!confirm('Delete this mask?')) return;
+    map.masks = (map.masks||[]).filter(m => m.id !== selectedMaskId);
+    selectedMaskId = null;
+    saveWorld(); renderMasks(); renderMapProps();
+    showToast('Mask deleted'); return;
+  }
+  if (selectedObjectId && map) {
+    const obj = (map.objects||[]).find(o => o.id === selectedObjectId);
+    // Clean up portal entry if this is a portal object
+    if (obj && isPortalObj(obj) && obj.portal_id) {
+      map.portals = (map.portals||[]).filter(p => p.id !== obj.portal_id);
+    }
+    map.objects = (map.objects||[]).filter(o => o.id !== selectedObjectId);
+    selectedObjectId = null;
+    saveWorld(); renderCanvas(); renderMapProps(); renderMapList();
+    showToast('Object removed');
+  } else if (activeMapId) {
+    if (!confirm('Delete this map?')) return;
+    world.maps = world.maps.filter(m => m.id !== activeMapId);
+    activeMapId = null;
+    saveWorld(); renderMapList(); renderCanvas(); renderMapProps();
+    showToast('Map deleted');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// PORTAL HELPERS
+// ═══════════════════════════════════════════════════
+function isPortalObj(obj) {
+  if (!obj) return false;
+  if (obj.type === 'portal') return true;
+  const entity = world.entities.find(e => e.id === obj.entity_id);
+  return entity?.category === 'portal';
+}
+
+// ═══════════════════════════════════════════════════
+// PLACE OBJECT MODAL
+// ═══════════════════════════════════════════════════
+let pendingPlaceX = 0, pendingPlaceY = 0;
+
+function openPlaceObjectModal(x, y) {
+  if (!activeMapId) return;
+  pendingPlaceX = x; pendingPlaceY = y;
+
+  const filtered = world.entities;
+  const otherMaps = world.maps.filter(m => m.id !== activeMapId);
+
+  document.getElementById('modalTitle').textContent = 'Place Object';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">
+      Position: (${(x*100).toFixed(1)}%, ${(y*100).toFixed(1)}%)
+    </div>
+    ${filtered.length === 0 ? `
+      <div class="empty-state" style="padding:20px">
+        <div class="es-icon">🌾</div>
+        <div>No entities yet.<br>Create some in the Entities tab first.</div>
+      </div>
+    ` : `
+      <div class="field-group">
+        <div class="field-label">Choose Entity</div>
+        <select class="field-input" id="placeEntityId" onchange="onPlaceEntityChange(this.value)">
+          <option value="">— select entity —</option>
+          ${filtered.map(e=>`<option value="${e.id}">${CATEGORY_ICONS[e.category]||''} ${e.name} (${e.category})</option>`).join('')}
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Label Override (optional)</div>
+        <input class="field-input" id="placeLabel" placeholder="Leave blank to use entity name">
+      </div>
+      <div id="portalExtraFields" style="display:none">
+        <div class="divider" style="margin:8px 0"></div>
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--amber);margin-bottom:8px">🚪 Portal settings</div>
+        <div class="field-group" style="margin-bottom:8px">
+          <div class="field-label">Links to Map</div>
+          <select class="field-input" id="placePortalTarget">
+            <option value="">— unlinked (set later) —</option>
+            ${otherMaps.map(m=>`<option value="${m.id}">${m.type==='top-down'?'🗺':'🏠'} ${m.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Requires Level</div>
+          <input class="field-input" id="placePortalLevel" type="number" min="0" value="0">
+        </div>
+      </div>
+    `}
+  `;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    ${filtered.length > 0 ? `<button class="btn primary" onclick="confirmPlaceObject()">Place</button>` : ''}
+  `;
+  openModal();
+}
+
+function onPlaceEntityChange(entityId) {
+  const entity = world.entities.find(e => e.id === entityId);
+  const portalFields = document.getElementById('portalExtraFields');
+  if (portalFields) {
+    portalFields.style.display = entity?.category === 'portal' ? 'block' : 'none';
+  }
+}
+
+function confirmPlaceObject() {
+  const entityId = document.getElementById('placeEntityId')?.value;
+  if (!entityId) { showToast('Select an entity'); return; }
+  const label = document.getElementById('placeLabel')?.value || '';
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map) return;
+  if (!map.objects) map.objects = [];
+
+  const entity = world.entities.find(e => e.id === entityId);
+  const isPortal = entity?.category === 'portal';
+
+  const obj = {
+    id: 'obj_' + Date.now(),
+    entity_id: entityId,
+    label,
+    x: pendingPlaceX,
+    y: pendingPlaceY,
+    state: 'idle',
+    size: 48,
+    z_order: isPortal ? 20 : 10,
+    notes: ''
+  };
+
+  // If it's a portal entity, wire up the full portal infrastructure
+  if (isPortal) {
+    if (!map.portals) map.portals = [];
+    const portalTarget = document.getElementById('placePortalTarget')?.value || null;
+    const portalLevel = parseInt(document.getElementById('placePortalLevel')?.value) || 0;
+    const portalId = 'portal_' + Date.now();
+    map.portals.push({
+      id: portalId,
+      to: portalTarget,
+      label: label || entity.name,
+      requires_level: portalLevel,
+      x: pendingPlaceX,
+      y: pendingPlaceY
+    });
+    obj.type = 'portal';
+    obj.portal_id = portalId;
+  }
+
+  map.objects.push(obj);
+  saveWorld(); renderCanvas(); renderMapList();
+  closeModal(); showToast(isPortal ? 'Portal placed' : 'Object placed');
+}
+
+// ═══════════════════════════════════════════════════
+// PORTAL
+// ═══════════════════════════════════════════════════
+function addPortal(x, y) {
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map) return;
+  const otherMaps = world.maps.filter(m => m.id !== activeMapId);
+
+  document.getElementById('modalTitle').textContent = 'Add Portal';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">
+      Position: (${(x*100).toFixed(1)}%, ${(y*100).toFixed(1)}%)
+    </div>
+    <div class="field-group">
+      <div class="field-label">Portal Label</div>
+      <input class="field-input" id="portalLabel" placeholder="e.g. 'Garden Gate', 'Shed Door'">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Links to Map</div>
+      <select class="field-input" id="portalTarget">
+        <option value="">— unlinked (add later) —</option>
+        ${otherMaps.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Requires Level</div>
+      <input class="field-input" id="portalLevel" type="number" min="0" value="0">
+    </div>
+  `;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="confirmAddPortal(${x},${y})">Add Portal</button>
+  `;
+  openModal();
+}
+
+function confirmAddPortal(x, y) {
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map) return;
+  if (!map.portals) map.portals = [];
+  if (!map.objects) map.objects = [];
+
+  const label = document.getElementById('portalLabel').value || 'Portal';
+  const to = document.getElementById('portalTarget').value || null;
+  const level = parseInt(document.getElementById('portalLevel').value) || 0;
+
+  const portalId = 'portal_' + Date.now();
+  map.portals.push({ id: portalId, to, label, requires_level: level, x, y });
+  map.objects.push({ id: 'obj_' + Date.now(), entity_id: null, type: 'portal', label, x, y, state: 'idle', portal_id: portalId });
+
+  saveWorld(); renderCanvas(); renderMapProps(); renderMapList();
+  closeModal(); showToast('Portal added');
+}
+
+// ═══════════════════════════════════════════════════
+// NEW MAP MODAL
+// ═══════════════════════════════════════════════════
+function openNewMapModal() {
+  document.getElementById('modalTitle').textContent = 'New Map';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field-group">
+      <div class="field-label">Map Name</div>
+      <input class="field-input" id="newMapName" placeholder="e.g. Abandoned Lot, Rooftop Garden">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Type</div>
+      <select class="field-input" id="newMapType">
+        <option value="top-down">Top-down (outdoor)</option>
+        <option value="side-view">Side-view (indoor)</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Climate Zone</div>
+      <div class="zone-grid">${[...Array(12)].map((_,i)=>`
+        <div class="zone-chip ${i===5?'active':''}" onclick="toggleNewZone(${i+1},this)">${i+1}</div>
+      `).join('')}</div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Blight Level (0–100)</div>
+      <input class="field-input" id="newMapBlight" type="number" min="0" max="100" value="75">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Description</div>
+      <textarea class="field-input" id="newMapDesc" placeholder="A brief description of this space..."></textarea>
+    </div>
+  `;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="confirmNewMap()">Create Map</button>
+  `;
+  openModal();
+}
+
+let newMapZone = 6;
+function toggleNewZone(z, el) {
+  newMapZone = z;
+  document.querySelectorAll('#modalBody .zone-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function confirmNewMap() {
+  const name = document.getElementById('newMapName').value.trim();
+  if (!name) { showToast('Enter a map name'); return; }
+  const map = {
+    id: 'map_' + Date.now(),
+    name,
+    type: document.getElementById('newMapType').value,
+    zone: newMapZone,
+    blight_level: parseInt(document.getElementById('newMapBlight').value) || 75,
+    description: document.getElementById('newMapDesc').value,
+    background: null,
+    portals: [],
+    objects: []
+  };
+  world.maps.push(map);
+  saveWorld();
+  closeModal();
+  selectMap(map.id);
+  showToast(`Map "${name}" created`);
+}
+
+// ═══════════════════════════════════════════════════
+// ENTITY EDITOR
+// ═══════════════════════════════════════════════════
+function renderEntityList() {
+  const el = document.getElementById('entityList');
+  const filtered = world.entities.filter(e =>
+    currentCategoryFilter === 'all' || e.category === currentCategoryFilter
+  );
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><div class="es-icon">🌾</div><div>No entities${currentCategoryFilter!=='all'?' in this category':' yet'}</div></div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(e => `
+    <div class="list-item ${e.id === activeEntityId ? 'active' : ''}" onclick="selectEntity('${e.id}')">
+      <div class="item-icon">${CATEGORY_ICONS[e.category]||'📦'}</div>
+      <div class="item-info">
+        <div class="item-name">${e.name}</div>
+        <div class="item-meta">${e.category} · ${e.rarity||'common'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCategory(cat, el) {
+  currentCategoryFilter = cat;
+  document.querySelectorAll('#categoryFilter .tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderEntityList();
+}
+
+function selectEntity(id) {
+  activeEntityId = id;
+  renderEntityList();
+  renderEntityForm();
+}
+
+function renderEntityForm() {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  const form = document.getElementById('entityForm');
+  if (!entity) {
+    form.innerHTML = `<div class="empty-state"><div class="es-icon">🌾</div><div>Select an entity to edit</div></div>`;
+    return;
+  }
+
+  form.innerHTML = `
+    <!-- IDENTITY -->
+    <div class="form-section">
+      <div class="form-section-header">Identity</div>
+      <div class="form-section-body">
+        <div class="field-row">
+          <div class="field-group" style="flex:2">
+            <div class="field-label">Name</div>
+            <input class="field-input" id="eName" value="${entity.name}">
+          </div>
+          <div class="field-group">
+            <div class="field-label">Category</div>
+            <select class="field-input" id="eCategory">
+              ${Object.keys(CATEGORY_ICONS).map(c=>`<option value="${c}" ${entity.category===c?'selected':''}>${CATEGORY_ICONS[c]} ${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Description</div>
+          <textarea class="field-input" id="eDesc">${entity.description||''}</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Rarity</div>
+          <select class="field-input" id="eRarity">
+            ${['common','uncommon','rare','legendary'].map(r=>`<option value="${r}" ${entity.rarity===r?'selected':''}>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Sprite / Image</div>
+          <div class="sprite-upload-area">
+            <div class="sprite-preview" onclick="triggerSpriteUpload()" title="Click to upload image">
+              ${entity.sprite
+                ? `<img id="spritePreviewImg" src="${entity.sprite}" alt="sprite">`
+                : `<span id="spritePreviewImg" style="font-size:1.8rem;opacity:0.4">🖼</span>`}
+              <div class="sprite-hint">${entity.sprite ? 'click to change' : 'click to upload'}</div>
+            </div>
+            <div class="sprite-controls">
+              <button class="btn primary" onclick="triggerSpriteUpload()" style="width:100%">📁 Upload Image File</button>
+              <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);text-align:center">— or paste a URL below —</div>
+              <input class="field-input" id="eSprite" placeholder="https://... or assets/objects/..." value="${(entity.sprite && !entity.sprite.startsWith('data:')) ? entity.sprite : ''}" oninput="onSpriteUrlInput(this.value)">
+              ${entity.sprite ? `<button class="btn danger" onclick="clearEntitySprite()" style="width:100%;font-size:0.68rem;padding:4px 8px">✕ Remove Sprite</button>` : ''}
+            </div>
+          </div>
+          <input type="file" id="spriteFileInput" accept="image/*" style="display:none" onchange="loadSpriteImage(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- PROPERTIES -->
+    <div class="form-section">
+      <div class="form-section-header">Properties</div>
+      <div class="form-section-body">
+        <div class="field-group">
+          <div class="field-label">Zone Requirements</div>
+          <div class="zone-grid">${[...Array(12)].map((_,i)=>`
+            <div class="zone-chip ${(entity.zone_requirements||[]).includes(i+1)?'active':''}"
+                 onclick="toggleEntityZone(${i+1},this)">${i+1}</div>
+          `).join('')}</div>
+          <div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px">Leave all off = available everywhere</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Effect</div>
+          <select class="field-input" id="eEffect">
+            <option value="">none</option>
+            ${['speeds_growth','slows_blight','restores_soil','attracts_creatures','provides_shelter','reveals_hidden','blocks_hazard','generates_seeds'].map(ef=>`
+              <option value="${ef}" ${entity.effect===ef?'selected':''}>${ef.replace(/_/g,' ')}</option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Grow Time (hours)</div>
+          <input class="field-input" id="eGrowTime" type="number" min="0" value="${entity.grow_time_hours||0}">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label class="check-row"><input type="checkbox" id="eCollectible" ${entity.collectible?'checked':''}><span>Collectible</span></label>
+          <label class="check-row"><input type="checkbox" id="eInteractable" ${entity.interactable?'checked':''}><span>Interactable</span></label>
+          <label class="check-row"><input type="checkbox" id="eHidden" ${entity.hidden?'checked':''}><span>Hidden (must be discovered)</span></label>
+          <label class="check-row"><input type="checkbox" id="eTradeable" ${entity.tradeable?'checked':''}><span>Tradeable between players</span></label>
+          <label class="check-row"><input type="checkbox" id="eRespawn" ${entity.respawn?'checked':''} onchange="toggleRespawnFields(this.checked)"><span>Respawns after collection</span></label>
+        </div>
+        <div id="respawnFields" style="display:${entity.respawn?'flex':'none'};flex-direction:column;gap:8px;padding:8px;background:var(--panel-bg);border:1px solid var(--border);border-radius:var(--radius)">
+          <div class="field-group">
+            <div class="field-label">Respawn After (hours)</div>
+            <input class="field-input" id="eRespawnHours" type="number" min="0" step="0.5" value="${entity.respawn_hours||24}">
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Growth Speed Multiplier</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="range" id="eGrowSpeedRange" min="0.1" max="5" step="0.1" value="${entity.growth_speed_multiplier||1}"
+              style="flex:1;accent-color:var(--sprout)"
+              oninput="document.getElementById('eGrowSpeed').value=parseFloat(this.value).toFixed(1);document.getElementById('eGrowSpeedLabel').textContent=parseFloat(this.value).toFixed(1)+'×'">
+            <input class="field-input" id="eGrowSpeed" type="number" min="0.1" max="5" step="0.1"
+              value="${(entity.growth_speed_multiplier||1).toFixed(1)}" style="width:64px"
+              oninput="document.getElementById('eGrowSpeedRange').value=this.value;document.getElementById('eGrowSpeedLabel').textContent=parseFloat(this.value).toFixed(1)+'×'">
+            <span id="eGrowSpeedLabel" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--sprout);min-width:32px">${(entity.growth_speed_multiplier||1).toFixed(1)}×</span>
+          </div>
+          <div style="font-size:0.68rem;color:var(--text-dim)">1.0 = normal · 0.5 = half speed · 2.0 = double speed</div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Ambient Sound</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" onclick="triggerAmbientSoundUpload()" style="flex:1">🔊 Upload Audio</button>
+            ${entity.ambient_sound ? `
+              <button class="btn" onclick="previewAmbientSound()" title="Preview">▶</button>
+              <button class="btn danger" onclick="clearAmbientSound()" title="Remove">✕</button>
+            ` : ''}
+          </div>
+          ${entity.ambient_sound ? `<div style="font-size:0.7rem;color:var(--sprout);font-family:var(--font-mono);margin-top:4px">✓ Sound loaded (${entity.ambient_sound.startsWith('data:')?'uploaded file':'URL'})</div>` : `<div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px">No ambient sound set</div>`}
+          <input class="field-input" id="eAmbientSoundUrl" placeholder="or paste URL to audio file" value="${entity.ambient_sound && !entity.ambient_sound.startsWith('data:') ? entity.ambient_sound : ''}" style="margin-top:4px" oninput="setAmbientSoundUrl(this.value)">
+          <input type="file" id="ambientSoundInput" accept="audio/*" style="display:none" onchange="loadAmbientSound(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- STATES -->
+    <div class="form-section">
+      <div class="form-section-header">
+        States
+        <button class="btn" style="padding:2px 8px;font-size:0.65rem" onclick="addState()">+ Add</button>
+      </div>
+      <div class="form-section-body">
+        <div class="states-list" id="statesList">
+          ${(entity.states||[{id:'idle',label:'Idle'}]).map((s,i)=>`
+            <div class="state-row" data-idx="${i}">
+              <input class="field-input" style="width:90px" placeholder="id" value="${s.id}" oninput="updateState(${i},'id',this.value)">
+              <input class="field-input" style="flex:1" placeholder="label" value="${s.label||''}" oninput="updateState(${i},'label',this.value)">
+              <button class="btn danger" style="padding:2px 6px;font-size:0.7rem" onclick="removeState(${i})">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- REQUIREMENTS -->
+    <div class="form-section">
+      <div class="form-section-header">
+        Required Tools to Place/Plant
+        <button class="btn" style="padding:2px 8px;font-size:0.65rem" onclick="addPlaceRequirement()">+ Add</button>
+      </div>
+      <div class="form-section-body">
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:4px">Player must have ALL of these in their inventory to place this entity on a map.</div>
+        <div id="placeRequiresList" style="display:flex;flex-direction:column;gap:6px">
+          ${(entity.place_requires||[]).length === 0
+            ? `<div style="font-size:0.78rem;color:var(--text-dim)">No requirements — anyone can place this</div>`
+            : (entity.place_requires||[]).map((rid, i) => {
+                const req = world.entities.find(e => e.id === rid);
+                return `
+                  <div style="display:flex;gap:6px;align-items:center">
+                    <select class="field-input" style="flex:1" onchange="updatePlaceRequire(${i},this.value)">
+                      <option value="">— select tool/entity —</option>
+                      ${world.entities.filter(e=>e.id!==entity.id).map(e=>`
+                        <option value="${e.id}" ${rid===e.id?'selected':''}>${CATEGORY_ICONS[e.category]||''} ${e.name}</option>
+                      `).join('')}
+                    </select>
+                    <button class="btn danger" style="padding:2px 6px;font-size:0.7rem" onclick="removePlaceRequire(${i})">✕</button>
+                  </div>`;
+              }).join('')
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERACTIONS -->
+    <div class="form-section">
+      <div class="form-section-header">
+        Interactions
+        <button class="btn" style="padding:2px 8px;font-size:0.65rem" onclick="addInteraction()">+ Add</button>
+      </div>
+      <div class="form-section-body">
+        <div class="interactions-list" id="interactionsList">
+          ${(entity.interactions||[]).map((ix,i)=>`
+            <div class="interaction-row" data-idx="${i}">
+              <div class="interaction-row-top">
+                <select class="field-input" style="flex:1" onchange="updateInteraction(${i},'trigger',this.value)">
+                  ${['click','collect','water','harvest','inspect','plant'].map(t=>`<option value="${t}" ${ix.trigger===t?'selected':''}>${t}</option>`).join('')}
+                </select>
+                <select class="field-input" style="flex:1" onchange="updateInteraction(${i},'action',this.value);renderEntityForm()">
+                  ${['collect','grow','reveal','unlock','reward','transform','gift','plant','harvest','dialog'].map(a=>`<option value="${a}" ${ix.action===a?'selected':''}>${a}</option>`).join('')}
+                </select>
+                <button class="btn danger" style="padding:2px 6px;font-size:0.7rem" onclick="removeInteraction(${i})">✕</button>
+              </div>
+              ${ix.action==='dialog' ? `
+                <div style="display:flex;align-items:center;gap:6px;padding:6px;background:var(--panel-bg);border:1px solid var(--border);border-radius:var(--radius)">
+                  <span style="font-size:0.72rem;color:var(--text-dim);flex:1">${ix.dialog_id ? `Dialog: ${ix.dialog_id}` : 'No dialog tree yet'}</span>
+                  <button class="btn primary" style="padding:3px 10px;font-size:0.68rem" onclick="openDialogEditor('${entity.id}',${i})">✎ Edit Dialog</button>
+                </div>
+              ` : ''}
+              <input class="field-input" placeholder="reward (e.g. seed_packet, 10_coins)" value="${ix.reward||''}" oninput="updateInteraction(${i},'reward',this.value)">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">🔧 Requires:</div>
+                <select class="field-input" style="flex:1;font-size:0.75rem" onchange="updateInteraction(${i},'requires_entity_id',this.value)">
+                  <option value="">none (always available)</option>
+                  ${world.entities.filter(e=>e.id!==entity.id).map(e=>`
+                    <option value="${e.id}" ${ix.requires_entity_id===e.id?'selected':''}>${CATEGORY_ICONS[e.category]||''} ${e.name}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">🔔 Sound:</div>
+                <input class="field-input" style="flex:1;font-size:0.75rem" placeholder="URL or leave blank" value="${ix.sound||''}" oninput="updateInteraction(${i},'sound',this.value)">
+                <button class="btn" style="padding:2px 6px;font-size:0.7rem;flex-shrink:0" onclick="triggerInteractionSound(${i})" title="Upload">📁</button>
+              </div>
+              <input type="file" id="ixSoundInput_${i}" accept="audio/*" style="display:none" onchange="loadInteractionSound(event,${i})">
+            </div>
+          `).join('')}
+          ${(entity.interactions||[]).length===0?`<div style="font-size:0.78rem;color:var(--text-dim)">No interactions defined</div>`:''}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn danger" onclick="deleteEntity()">Delete Entity</button>
+      <button class="btn primary" style="flex:1" onclick="saveEntity()">Save Entity</button>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text-dim)">ID: ${entity.id}</div>
+  `;
+
+  // store working zone selection
+  window._entityZones = [...(entity.zone_requirements||[])];
+}
+
+function triggerSpriteUpload() {
+  const input = document.getElementById('spriteFileInput');
+  if (input) input.click();
+}
+
+function loadSpriteImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const entity = world.entities.find(en => en.id === activeEntityId);
+    if (!entity) return;
+    entity.sprite = ev.target.result;
+    // Update preview live without full re-render
+    const preview = document.getElementById('spritePreviewImg');
+    if (preview) {
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      preview.replaceWith(img);
+      img.id = 'spritePreviewImg';
+    }
+    // clear url input since we have base64 now
+    const urlInput = document.getElementById('eSprite');
+    if (urlInput) urlInput.value = '';
+    saveWorld();
+    showToast('Sprite uploaded');
+  };
+  reader.readAsDataURL(file);
+}
+
+function onSpriteUrlInput(val) {
+  const entity = world.entities.find(en => en.id === activeEntityId);
+  if (!entity) return;
+  entity.sprite = val;
+  const preview = document.getElementById('spritePreviewImg');
+  if (preview && val) {
+    if (preview.tagName === 'IMG') { preview.src = val; }
+    else {
+      const img = document.createElement('img');
+      img.src = val; img.id = 'spritePreviewImg';
+      preview.replaceWith(img);
+    }
+  }
+}
+
+function clearEntitySprite() {
+  const entity = world.entities.find(en => en.id === activeEntityId);
+  if (!entity) return;
+  entity.sprite = '';
+  saveWorld();
+  renderEntityForm();
+  showToast('Sprite cleared');
+}
+
+
+function addPlaceRequirement() {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity) return;
+  if (!entity.place_requires) entity.place_requires = [];
+  entity.place_requires.push('');
+  renderEntityForm();
+}
+function removePlaceRequire(i) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.place_requires) { entity.place_requires.splice(i, 1); renderEntityForm(); }
+}
+function updatePlaceRequire(i, val) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.place_requires) entity.place_requires[i] = val;
+}
+
+function toggleEntityZone(z, el) {
+  el.classList.toggle('active');
+  if (!window._entityZones) window._entityZones = [];
+  const idx = window._entityZones.indexOf(z);
+  if (idx === -1) window._entityZones.push(z);
+  else window._entityZones.splice(idx, 1);
+}
+
+function addState() {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity) return;
+  if (!entity.states) entity.states = [];
+  entity.states.push({ id: 'new_state', label: 'New State' });
+  renderEntityForm();
+}
+function removeState(i) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.states) { entity.states.splice(i, 1); renderEntityForm(); }
+}
+function updateState(i, key, val) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.states?.[i]) entity.states[i][key] = val;
+}
+
+function addInteraction() {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity) return;
+  if (!entity.interactions) entity.interactions = [];
+  entity.interactions.push({ trigger: 'click', action: 'collect', reward: '', requires_entity_id: '' });
+  renderEntityForm();
+}
+function removeInteraction(i) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.interactions) { entity.interactions.splice(i, 1); renderEntityForm(); }
+}
+function updateInteraction(i, key, val) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.interactions?.[i]) entity.interactions[i][key] = val;
+}
+
+function saveEntity() {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity) return;
+  entity.name = document.getElementById('eName')?.value || entity.name;
+  entity.category = document.getElementById('eCategory')?.value || entity.category;
+  entity.description = document.getElementById('eDesc')?.value || '';
+  entity.rarity = document.getElementById('eRarity')?.value || 'common';
+  // Only update sprite from URL field if it has a value; base64 is updated live on upload
+  const spriteUrl = document.getElementById('eSprite')?.value || '';
+  if (spriteUrl) entity.sprite = spriteUrl;
+  entity.effect = document.getElementById('eEffect')?.value || '';
+  entity.grow_time_hours = parseFloat(document.getElementById('eGrowTime')?.value) || 0;
+  entity.collectible = document.getElementById('eCollectible')?.checked || false;
+  entity.interactable = document.getElementById('eInteractable')?.checked || false;
+  entity.hidden = document.getElementById('eHidden')?.checked || false;
+  entity.tradeable = document.getElementById('eTradeable')?.checked || false;
+  entity.respawn = document.getElementById('eRespawn')?.checked || false;
+  entity.respawn_hours = parseFloat(document.getElementById('eRespawnHours')?.value) || 24;
+  entity.growth_speed_multiplier = parseFloat(document.getElementById('eGrowSpeed')?.value) || 1.0;
+  const ambientUrl = document.getElementById('eAmbientSoundUrl')?.value || '';
+  if (ambientUrl) entity.ambient_sound = ambientUrl;
+  entity.zone_requirements = [...(window._entityZones||[])].sort((a,b)=>a-b);
+  // place_requires is updated live via updatePlaceRequire, just clean empty entries
+  entity.place_requires = (entity.place_requires||[]).filter(r => r && r !== '');
+  saveWorld();
+  renderEntityList();
+  showToast(`"${entity.name}" saved`);
+}
+
+// ═══════════════════════════════════════════════════
+// RESPAWN / GROWTH / SOUND HELPERS
+// ═══════════════════════════════════════════════════
+function toggleRespawnFields(checked) {
+  const el = document.getElementById('respawnFields');
+  if (el) el.style.display = checked ? 'flex' : 'none';
+}
+
+function triggerAmbientSoundUpload() {
+  document.getElementById('ambientSoundInput')?.click();
+}
+
+function loadAmbientSound(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const entity = world.entities.find(en => en.id === activeEntityId);
+    if (!entity) return;
+    entity.ambient_sound = ev.target.result;
+    saveWorld(); renderEntityForm(); showToast('Ambient sound loaded');
+  };
+  reader.readAsDataURL(file);
+}
+
+function setAmbientSoundUrl(val) {
+  const entity = world.entities.find(en => en.id === activeEntityId);
+  if (entity) entity.ambient_sound = val;
+}
+
+function clearAmbientSound() {
+  const entity = world.entities.find(en => en.id === activeEntityId);
+  if (!entity) return;
+  entity.ambient_sound = '';
+  saveWorld(); renderEntityForm(); showToast('Ambient sound removed');
+}
+
+function previewAmbientSound() {
+  const entity = world.entities.find(en => en.id === activeEntityId);
+  if (!entity?.ambient_sound) return;
+  const audio = new Audio(entity.ambient_sound);
+  audio.play().catch(() => showToast('Cannot preview this audio format'));
+}
+
+function triggerInteractionSound(i) {
+  document.getElementById(`ixSoundInput_${i}`)?.click();
+}
+
+function loadInteractionSound(e, i) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const entity = world.entities.find(en => en.id === activeEntityId);
+    if (entity?.interactions?.[i]) {
+      entity.interactions[i].sound = ev.target.result;
+      saveWorld(); showToast('Interaction sound loaded');
+      // Update the text field live
+      const input = document.querySelector(`#interactionsList .interaction-row[data-idx="${i}"] input[placeholder="URL or leave blank"]`);
+      if (input) input.value = '[uploaded audio]';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// Save respawn + growth speed in saveEntity
+const _origSaveEntity = saveEntity;
+// (saveEntity patched inline below)
+
+// ═══════════════════════════════════════════════════
+// DIALOG TREE EDITOR
+// ═══════════════════════════════════════════════════
+let activeDialogId = null;
+let activeDialogNodeId = null;
+let dialogNodeDrag = null;
+
+function openDialogEditor(entityId, interactionIdx) {
+  const entity = world.entities.find(e => e.id === entityId);
+  if (!entity) return;
+  const ix = entity.interactions[interactionIdx];
+  if (!ix) return;
+
+  // Create dialog if none exists
+  if (!ix.dialog_id) {
+    if (!world.dialogs) world.dialogs = [];
+    const dlg = {
+      id: 'dlg_' + Date.now(),
+      name: `${entity.name} dialog`,
+      nodes: [{
+        id: 'node_start',
+        speaker: entity.name,
+        text: 'Hello, traveller.',
+        x: 40, y: 40,
+        choices: [{ id: 'c1', text: 'Hello!', next: null }]
+      }],
+      start_node: 'node_start'
+    };
+    world.dialogs.push(dlg);
+    ix.dialog_id = dlg.id;
+    saveWorld();
+  }
+
+  activeDialogId = ix.dialog_id;
+  activeDialogNodeId = null;
+  renderDialogEditorModal(entityId, interactionIdx);
+}
+
+function renderDialogEditorModal(entityId, interactionIdx) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (!dlg) return;
+
+  // Make modal fullscreen for dialog editor
+  document.querySelector('.modal').classList.add('modal-fullscreen');
+
+  document.getElementById('modalTitle').textContent = `Dialog: ${dlg.name}`;
+
+  const modalBody = document.getElementById('modalBody');
+  modalBody.style.padding = '0';
+  modalBody.style.overflow = 'hidden';
+  modalBody.style.display = 'flex';
+  modalBody.style.flexDirection = 'column';
+  modalBody.style.gap = '0';
+  modalBody.style.height = '';  // let CSS handle it
+
+  modalBody.innerHTML = `
+    <div class="dialog-workspace" style="height:100%;display:flex;flex-direction:column;min-height:0">
+      <div class="dialog-toolbar">
+        <button class="btn primary" onclick="addDialogNode()">+ Node</button>
+        <button class="btn" onclick="autoLayoutNodes()">Auto Layout</button>
+        <div style="flex:1"></div>
+        <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim)">${dlg.nodes.length} nodes · click node to edit · drag to move</span>
+      </div>
+      <div class="dialog-main-area" style="flex:1;display:flex;overflow:hidden;min-height:0">
+        <div class="dialog-canvas" id="dialogCanvas" style="flex:1;overflow:auto;position:relative;min-height:0;min-width:0">
+          <svg class="svg-connections" id="dialogSvg"></svg>
+          ${dlg.nodes.map(n => renderDialogNode(n, dlg)).join('')}
+        </div>
+        <div class="dialog-node-edit" id="dialogNodeEdit" style="width:320px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;border-left:1px solid var(--border)">
+          <div class="dialog-edit-header">Node Properties</div>
+          <div class="dialog-edit-body" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:0.78rem;color:var(--text-dim)">Click a node on the canvas to edit it.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeDialogEditor(${entityId?`'${entityId}'`:'null'},${interactionIdx})">Done</button>
+  `;
+
+  // Bind node drag after render
+  requestAnimationFrame(() => {
+    bindDialogNodeDrag();
+    drawDialogConnections();
+    if (activeDialogNodeId) selectDialogNode(activeDialogNodeId);
+  });
+
+  openModal();
+}
+
+function renderDialogNode(node, dlg) {
+  const isStart = dlg.start_node === node.id;
+  const isSelected = node.id === activeDialogNodeId;
+  return `
+    <div class="dialog-node ${isSelected?'selected':''} ${isStart?'start-node':''}"
+         id="dnode_${node.id}"
+         style="left:${node.x||40}px;top:${node.y||40}px"
+         onclick="selectDialogNode('${node.id}')">
+      <div class="dialog-node-header ${isStart?'start':''}">
+        ${isStart?'▶ START · ':''}${node.id}
+        <div style="display:flex;gap:4px">
+          ${!isStart?`<span style="cursor:pointer;color:var(--amber)" onclick="event.stopPropagation();setStartNode('${node.id}')" title="Set as start">⚑</span>`:''}
+          <span style="cursor:pointer;color:var(--rust)" onclick="event.stopPropagation();deleteDialogNode('${node.id}')" title="Delete">✕</span>
+        </div>
+      </div>
+      <div class="dialog-node-body">
+        <div class="dialog-node-speaker">${node.speaker||'—'}</div>
+        <div class="dialog-node-text">${(node.text||'').substring(0,80)}${(node.text||'').length>80?'…':''}</div>
+        <div class="dialog-node-choices">
+          ${(node.choices||[]).map(c=>`
+            <div class="dialog-choice-chip">
+              <span>${(c.text||'').substring(0,24)}${(c.text||'').length>24?'…':''}</span>
+              <span class="choice-arrow">${c.next?'→ '+c.next:'end'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectDialogNode(nodeId) {
+  activeDialogNodeId = nodeId;
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const node = dlg?.nodes.find(n => n.id === nodeId);
+  if (!node) return;
+
+  // Update selected state visually
+  document.querySelectorAll('.dialog-node').forEach(el => el.classList.remove('selected'));
+  document.getElementById('dnode_'+nodeId)?.classList.add('selected');
+
+  const allNodes = dlg.nodes;
+  document.getElementById('dialogNodeEdit').innerHTML = `
+    <div class="dialog-edit-header">Edit Node · ${node.id}</div>
+    <div class="dialog-edit-body">
+      <div class="field-group">
+        <div class="field-label">Node ID</div>
+        <input class="field-input" id="dnodeId" value="${node.id}" oninput="updateDialogNode('id',this.value)">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Speaker</div>
+        <input class="field-input" id="dnodeSpeaker" value="${node.speaker||''}" oninput="updateDialogNode('speaker',this.value)">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Text</div>
+        <textarea class="field-input" id="dnodeText" style="min-height:80px" oninput="updateDialogNode('text',this.value)">${node.text||''}</textarea>
+      </div>
+      <div class="field-group">
+        <div class="field-label" style="display:flex;justify-content:space-between">
+          Choices
+          <button class="btn" style="padding:1px 6px;font-size:0.62rem" onclick="addDialogChoice()">+ Add</button>
+        </div>
+        <div id="choicesList" style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+          ${(node.choices||[]).map((c,ci)=>`
+            <div class="choice-edit-row">
+              <div style="display:flex;gap:4px;align-items:center">
+                <input class="field-input" placeholder="Choice text..." value="${c.text||''}"
+                  style="flex:1;font-size:0.78rem"
+                  oninput="updateDialogChoice(${ci},'text',this.value)">
+                <button class="btn danger" style="padding:2px 5px;font-size:0.65rem" onclick="removeDialogChoice(${ci})">✕</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="font-size:0.65rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">→ leads to:</div>
+                <select class="field-input" style="flex:1;font-size:0.72rem" onchange="updateDialogChoice(${ci},'next',this.value)">
+                  <option value="">end conversation</option>
+                  ${allNodes.filter(n=>n.id!==nodeId).map(n=>`
+                    <option value="${n.id}" ${c.next===n.id?'selected':''}>${n.id}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="font-size:0.65rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">reward:</div>
+                <input class="field-input" placeholder="optional reward" value="${c.reward||''}"
+                  style="flex:1;font-size:0.72rem"
+                  oninput="updateDialogChoice(${ci},'reward',this.value)">
+              </div>
+            </div>
+          `).join('')}
+          ${(node.choices||[]).length===0?`<div style="font-size:0.75rem;color:var(--text-dim)">No choices — conversation ends here</div>`:''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function updateDialogNode(key, val) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const node = dlg?.nodes.find(n => n.id === activeDialogNodeId);
+  if (!node) return;
+  if (key === 'id') {
+    // Update all references to this node id
+    const oldId = node.id;
+    node.id = val;
+    if (dlg.start_node === oldId) dlg.start_node = val;
+    dlg.nodes.forEach(n => {
+      (n.choices||[]).forEach(c => { if (c.next === oldId) c.next = val; });
+    });
+    activeDialogNodeId = val;
+  } else {
+    node[key] = val;
+  }
+  // Re-render node card live
+  const nodeEl = document.getElementById('dnode_'+node.id);
+  if (nodeEl) nodeEl.outerHTML = renderDialogNode(node, dlg);
+  bindDialogNodeDrag();
+  drawDialogConnections();
+}
+
+function updateDialogChoice(ci, key, val) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const node = dlg?.nodes.find(n => n.id === activeDialogNodeId);
+  if (node?.choices?.[ci]) {
+    node.choices[ci][key] = val;
+    drawDialogConnections();
+    // Refresh choice chips on the node card
+    const nodeEl = document.getElementById('dnode_'+node.id);
+    if (nodeEl) { nodeEl.outerHTML = renderDialogNode(node, dlg); bindDialogNodeDrag(); }
+  }
+}
+
+function addDialogChoice() {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const node = dlg?.nodes.find(n => n.id === activeDialogNodeId);
+  if (!node) return;
+  if (!node.choices) node.choices = [];
+  node.choices.push({ id: 'c'+Date.now(), text: 'New choice', next: null, reward: '' });
+  selectDialogNode(activeDialogNodeId);
+}
+
+function removeDialogChoice(ci) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const node = dlg?.nodes.find(n => n.id === activeDialogNodeId);
+  if (node?.choices) { node.choices.splice(ci, 1); selectDialogNode(activeDialogNodeId); drawDialogConnections(); }
+}
+
+function addDialogNode() {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (!dlg) return;
+  const id = 'node_' + Date.now();
+  dlg.nodes.push({ id, speaker: '', text: 'New node text.', x: 40 + dlg.nodes.length * 240, y: 40, choices: [] });
+  refreshDialogCanvas();
+  showToast('Node added');
+}
+
+function deleteDialogNode(nodeId) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (!dlg || dlg.start_node === nodeId) { showToast("Can't delete start node"); return; }
+  dlg.nodes = dlg.nodes.filter(n => n.id !== nodeId);
+  dlg.nodes.forEach(n => { (n.choices||[]).forEach(c => { if (c.next === nodeId) c.next = null; }); });
+  if (activeDialogNodeId === nodeId) activeDialogNodeId = null;
+  refreshDialogCanvas();
+}
+
+function setStartNode(nodeId) {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (dlg) { dlg.start_node = nodeId; refreshDialogCanvas(); }
+}
+
+function autoLayoutNodes() {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (!dlg) return;
+  const cols = Math.ceil(Math.sqrt(dlg.nodes.length));
+  dlg.nodes.forEach((n, i) => { n.x = 40 + (i % cols) * 250; n.y = 40 + Math.floor(i / cols) * 180; });
+  refreshDialogCanvas();
+}
+
+function refreshDialogCanvas() {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  if (!dlg) return;
+  const canvas = document.getElementById('dialogCanvas');
+  if (!canvas) return;
+  canvas.innerHTML = `<svg class="svg-connections" id="dialogSvg"></svg>${dlg.nodes.map(n => renderDialogNode(n, dlg)).join('')}`;
+  bindDialogNodeDrag();
+  drawDialogConnections();
+  if (activeDialogNodeId) selectDialogNode(activeDialogNodeId);
+}
+
+function drawDialogConnections() {
+  const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+  const svg = document.getElementById('dialogSvg');
+  if (!dlg || !svg) return;
+  let paths = '';
+  dlg.nodes.forEach(node => {
+    (node.choices||[]).forEach((c, ci) => {
+      if (!c.next) return;
+      const fromEl = document.getElementById('dnode_'+node.id);
+      const toEl = document.getElementById('dnode_'+c.next);
+      if (!fromEl || !toEl) return;
+      const fx = node.x + 220, fy = node.y + 60 + ci * 24;
+      const tx = toEl.offsetLeft, ty = toEl.offsetTop + 30;
+      const cx1 = fx + 60, cy1 = fy, cx2 = tx - 60, cy2 = ty;
+      paths += `<path d="M${fx},${fy} C${cx1},${cy1} ${cx2},${cy2} ${tx},${ty}"
+        fill="none" stroke="${ci===0?'#6b8f4e':'#d4892a'}" stroke-width="1.5" stroke-opacity="0.7"
+        marker-end="url(#arrow)"/>`;
+    });
+  });
+  svg.innerHTML = `
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#6b8f4e"/>
+      </marker>
+    </defs>
+    ${paths}`;
+}
+
+function bindDialogNodeDrag() {
+  document.querySelectorAll('.dialog-node').forEach(el => {
+    el.addEventListener('mousedown', function(e) {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SPAN') return;
+      const dlg = (world.dialogs||[]).find(d => d.id === activeDialogId);
+      const nodeId = this.id.replace('dnode_','');
+      const node = dlg?.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const startX = e.clientX - node.x, startY = e.clientY - node.y;
+      dialogNodeDrag = { node, startX, startY };
+      e.stopPropagation();
+    });
+  });
+
+  const canvas = document.getElementById('dialogCanvas');
+  if (!canvas) return;
+  canvas.onmousemove = e => {
+    if (!dialogNodeDrag) return;
+    const rect = canvas.getBoundingClientRect();
+    dialogNodeDrag.node.x = Math.max(0, e.clientX - dialogNodeDrag.startX);
+    dialogNodeDrag.node.y = Math.max(0, e.clientY - dialogNodeDrag.startY);
+    const el = document.getElementById('dnode_'+dialogNodeDrag.node.id);
+    if (el) { el.style.left = dialogNodeDrag.node.x+'px'; el.style.top = dialogNodeDrag.node.y+'px'; }
+    drawDialogConnections();
+  };
+  canvas.onmouseup = () => { dialogNodeDrag = null; saveWorld(); };
+}
+
+function closeDialogEditor(entityId, interactionIdx) {
+  saveWorld();
+  // Remove fullscreen class so regular modals are unaffected
+  document.querySelector('.modal').classList.remove('modal-fullscreen');
+  const modalBody = document.getElementById('modalBody');
+  modalBody.style.padding = '';
+  modalBody.style.overflow = '';
+  modalBody.style.display = '';
+  modalBody.style.flexDirection = '';
+  modalBody.style.gap = '';
+  closeModal();
+  activeDialogId = null;
+  activeDialogNodeId = null;
+  if (entityId) { activeEntityId = entityId; renderEntityForm(); }
+}
+
+
+function deleteEntity() {
+  if (!confirm('Delete this entity?')) return;
+  world.entities = world.entities.filter(e => e.id !== activeEntityId);
+  activeEntityId = null;
+  saveWorld();
+  renderEntityList();
+  document.getElementById('entityForm').innerHTML = `<div class="empty-state"><div class="es-icon">🌾</div><div>Select an entity to edit</div></div>`;
+  showToast('Entity deleted');
+}
+
+// ═══════════════════════════════════════════════════
+// NEW ENTITY MODAL
+// ═══════════════════════════════════════════════════
+function openNewEntityModal() {
+  document.getElementById('modalTitle').textContent = 'New Entity';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="field-group">
+      <div class="field-label">Name</div>
+      <input class="field-input" id="newEntityName" placeholder="e.g. Rusty Watering Can">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Category</div>
+      <select class="field-input" id="newEntityCat">
+        ${Object.keys(CATEGORY_ICONS).map(c=>`<option value="${c}">${CATEGORY_ICONS[c]} ${c}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Rarity</div>
+      <select class="field-input" id="newEntityRarity">
+        <option value="common">common</option>
+        <option value="uncommon">uncommon</option>
+        <option value="rare">rare</option>
+        <option value="legendary">legendary</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Description</div>
+      <textarea class="field-input" id="newEntityDesc" placeholder="What is this object?"></textarea>
+    </div>
+  `;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="confirmNewEntity()">Create</button>
+  `;
+  openModal();
+  setTimeout(() => document.getElementById('newEntityName')?.focus(), 100);
+}
+
+function confirmNewEntity() {
+  const name = document.getElementById('newEntityName').value.trim();
+  if (!name) { showToast('Enter a name'); return; }
+  const entity = {
+    id: 'entity_' + Date.now(),
+    name,
+    category: document.getElementById('newEntityCat').value,
+    rarity: document.getElementById('newEntityRarity').value,
+    description: document.getElementById('newEntityDesc').value,
+    sprite: '',
+    zone_requirements: [],
+    effect: '',
+    grow_time_hours: 0,
+    collectible: true,
+    interactable: true,
+    hidden: false,
+    tradeable: false,
+    respawn: false,
+    respawn_hours: 24,
+    growth_speed_multiplier: 1.0,
+    ambient_sound: '',
+    states: [{ id: 'idle', label: 'Idle' }],
+    interactions: [],
+    place_requires: []
+  };
+  world.entities.push(entity);
+  saveWorld();
+  closeModal();
+  activeEntityId = entity.id;
+  renderEntityList();
+  renderEntityForm();
+  showToast(`Entity "${name}" created`);
+}
+
+// ═══════════════════════════════════════════════════
+// JSON PREVIEW
+// ═══════════════════════════════════════════════════
+function renderJson() {
+  const clean = JSON.parse(JSON.stringify(world));
+  // Strip base64 for preview readability only
+  clean.maps.forEach(m => { if (m.background && m.background.startsWith('data:')) m.background = '[base64 image — included in export]'; });
+  clean.entities.forEach(e => { if (e.sprite && e.sprite.startsWith('data:')) e.sprite = '[base64 sprite — included in export]'; });
+  document.getElementById('jsonPane').textContent = JSON.stringify(clean, null, 2);
+}
+
+function copyJson() {
+  // Copy includes full base64
+  navigator.clipboard.writeText(JSON.stringify(world, null, 2));
+  showToast('Copied to clipboard (full data)');
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════
+function exportWorld() {
+  const clean = JSON.parse(JSON.stringify(world));
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'world.json';
+  a.click();
+  showToast('world.json downloaded');
+}
+
+function importWorld() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!imported.maps || !imported.entities) throw new Error('Invalid world.json');
+        world = imported;
+        activeMapId = null; activeEntityId = null; selectedObjectId = null;
+        saveWorld();
+        renderMapList(); renderEntityList(); renderCanvas(); renderMapProps();
+        showToast('World imported');
+      } catch(err) { showToast('Invalid file: ' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════
+function openModal() { document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.querySelector('.modal').classList.remove('modal-fullscreen');
+  const modalBody = document.getElementById('modalBody');
+  modalBody.style.padding = '';
+  modalBody.style.overflow = '';
+  modalBody.style.display = '';
+  modalBody.style.flexDirection = '';
+  modalBody.style.gap = '';
+}
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+
+// ═══════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════════
+// MASK SYSTEM
+// ═══════════════════════════════════════════════════
+const MASK_TYPES = {
+  no_plant:     { label:'No Plant Zone',   color:'rgba(220,60,60,0.28)',  stroke:'#e05050' },
+  no_walk:      { label:'No Walk Zone',    color:'rgba(60,60,220,0.28)',  stroke:'#5050e0' },
+  interact_only:{ label:'Interact Only',   color:'rgba(220,160,40,0.28)', stroke:'#e0a030' },
+  plant_only:   { label:'Plant Only',      color:'rgba(60,160,60,0.28)',  stroke:'#40b040' },
+  water:        { label:'Water Surface',   color:'rgba(40,160,220,0.28)', stroke:'#30a0e0' }
+};
+
+let maskDrawPoints = [];
+let selectedMaskId = null;
+let maskVisible = true;
+
+function toggleMaskVisibility() {
+  maskVisible = !maskVisible;
+  const btn = document.getElementById('toolMaskVis');
+  if (btn) btn.style.color = maskVisible ? '' : 'var(--rust)';
+  renderMasks();
+}
+
+function getCanvasCoords(e) {
+  const canvas = document.getElementById('mapCanvas');
+  const rect = canvas.getBoundingClientRect();
+  return { x:(e.clientX-rect.left)/rect.width, y:(e.clientY-rect.top)/rect.height };
+}
+
+document.getElementById('mapCanvas').addEventListener('dblclick', function(e) {
+  if (activeTool !== 'mask') return;
+  if (maskDrawPoints.length < 3) { showToast('Need at least 3 points'); return; }
+  e.preventDefault();
+  maskDrawPoints.pop(); // dblclick fires click twice — remove duplicate
+  finishMaskDraw();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && activeTool === 'mask') cancelMaskDraw();
+});
+
+// Mask click points are added in the main mapCanvas click handler — see renderCanvas section
+function addMaskPoint(e) {
+  if (!activeMapId) { showToast('Select a map first'); return; }
+  const coords = getCanvasCoords(e);
+  maskDrawPoints.push(coords);
+  renderMaskPreview();
+}
+
+function renderMaskPreview() {
+  const canvas = document.getElementById('mapCanvas');
+  const svg = document.getElementById('maskLayer');
+  if (!svg) return;
+  let g = document.getElementById('maskPreviewGroup');
+  if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg','g'); g.id='maskPreviewGroup'; svg.appendChild(g); }
+  g.innerHTML = '';
+  if (!maskDrawPoints.length) return;
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  const pts = maskDrawPoints.map(p=>`${p.x*w},${p.y*h}`).join(' ');
+  const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  poly.setAttribute('points',pts); poly.setAttribute('fill','rgba(255,255,100,0.15)');
+  poly.setAttribute('stroke','#f0e040'); poly.setAttribute('stroke-width','1.5');
+  poly.setAttribute('stroke-dasharray','5,3'); poly.setAttribute('pointer-events','none');
+  g.appendChild(poly);
+  maskDrawPoints.forEach(p=>{
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',p.x*w); c.setAttribute('cy',p.y*h); c.setAttribute('r','5');
+    c.setAttribute('fill','#f0e040'); c.setAttribute('stroke','#fff'); c.setAttribute('stroke-width','1');
+    c.setAttribute('pointer-events','none');
+    g.appendChild(c);
+  });
+}
+
+function finishMaskDraw() {
+  const points = [...maskDrawPoints];
+  maskDrawPoints = [];
+  document.getElementById('modalTitle').textContent = 'New Mask Polygon';
+  const typeOptions = Object.entries(MASK_TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim)">${points.length} points defined</div>
+    <div class="field-group">
+      <div class="field-label">Mask Type</div>
+      <select class="field-input" id="newMaskType">${typeOptions}</select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Label (optional)</div>
+      <input class="field-input" id="newMaskLabel" placeholder="e.g. Concrete path, Roof edge">
+    </div>
+  `;
+  window._pendingMaskPoints = points;
+  document.getElementById('modalFooter').innerHTML = `
+    <button class="btn" onclick="closeModal();cancelMaskDraw()">Cancel</button>
+    <button class="btn primary" onclick="confirmNewMask()">Save Mask</button>
+  `;
+  openModal();
+}
+
+function confirmNewMask() {
+  const type  = document.getElementById('newMaskType')?.value || 'no_plant';
+  const label = document.getElementById('newMaskLabel')?.value || '';
+  const points = window._pendingMaskPoints || [];
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map) return;
+  if (!map.masks) map.masks = [];
+  map.masks.push({ id:'mask_'+Date.now(), type, label, points });
+  saveWorld(); closeModal(); cancelMaskDraw(); renderMasks(); renderMapProps();
+  showToast('Mask saved');
+}
+
+function cancelMaskDraw() {
+  maskDrawPoints = [];
+  const g = document.getElementById('maskPreviewGroup');
+  if (g) g.remove();
+}
+
+function renderMasks() {
+  const svg = document.getElementById('maskLayer');
+  if (!svg) return;
+  Array.from(svg.children).forEach(c => { if (c.id !== 'maskPreviewGroup') c.remove(); });
+  if (!maskVisible || !activeMapId) return;
+  const map = world.maps.find(m => m.id === activeMapId);
+  if (!map?.masks?.length) return;
+  const canvas = document.getElementById('mapCanvas');
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+  map.masks.forEach(mask => {
+    const mt = MASK_TYPES[mask.type] || MASK_TYPES.no_plant;
+    const pts = mask.points.map(p=>`${p.x*w},${p.y*h}`).join(' ');
+    const isSelected = mask.id === selectedMaskId;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('data-mask-id', mask.id);
+
+    const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    poly.setAttribute('points',pts); poly.setAttribute('fill',mt.color);
+    poly.setAttribute('stroke',mt.stroke); poly.setAttribute('stroke-width',isSelected?'2.5':'1.5');
+    poly.setAttribute('stroke-dasharray','6,3'); poly.setAttribute('pointer-events','all');
+    poly.style.cursor = 'pointer';
+    poly.addEventListener('click', ev => {
+      if (activeTool !== 'select') return;
+      ev.stopPropagation();
+      selectedMaskId = mask.id;
+      renderMasks(); renderMaskProps(mask);
+    });
+    g.appendChild(poly);
+
+    // Centroid label
+    const cx = mask.points.reduce((s,p)=>s+p.x,0)/mask.points.length;
+    const cy = mask.points.reduce((s,p)=>s+p.y,0)/mask.points.length;
+    const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',cx*w); txt.setAttribute('y',cy*h);
+    txt.setAttribute('text-anchor','middle'); txt.setAttribute('dominant-baseline','middle');
+    txt.setAttribute('font-family','monospace'); txt.setAttribute('font-size','10');
+    txt.setAttribute('fill',mt.stroke); txt.setAttribute('pointer-events','none');
+    txt.textContent = mask.label || mt.label;
+    g.appendChild(txt);
+
+    // Drag handles when selected
+    if (isSelected) {
+      mask.points.forEach((p, pi) => {
+        const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        c.setAttribute('cx',p.x*w); c.setAttribute('cy',p.y*h); c.setAttribute('r','5');
+        c.setAttribute('fill','#fff'); c.setAttribute('stroke',mt.stroke); c.setAttribute('stroke-width','2');
+        c.setAttribute('pointer-events','all'); c.style.cursor='move';
+        c.addEventListener('mousedown', ev => {
+          ev.stopPropagation();
+          const onMove = mv => { const co=getCanvasCoords(mv); mask.points[pi]=co; renderMasks(); };
+          const onUp = () => { document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); saveWorld(); };
+          document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+        });
+        g.appendChild(c);
+      });
+    }
+    svg.appendChild(g);
+  });
+}
+
+function renderMaskProps(mask) {
+  const body = document.getElementById('propsBody');
+  const footer = document.getElementById('propsFooter');
+  footer.style.display = 'flex';
+  const mt = MASK_TYPES[mask.type] || MASK_TYPES.no_plant;
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--panel-mid);border-radius:var(--radius);border:1px solid var(--border)">
+      <div style="width:16px;height:16px;border-radius:3px;background:${mt.color};border:2px solid ${mt.stroke};flex-shrink:0"></div>
+      <div>
+        <div style="font-size:0.85rem;color:var(--text-bright)">${mt.label}</div>
+        <div style="font-size:0.7rem;color:var(--text-dim);font-family:var(--font-mono)">mask · ${mask.points.length} points</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Mask Type</div>
+      <select class="field-input" id="pMaskType">
+        ${Object.entries(MASK_TYPES).map(([k,v])=>`<option value="${k}"${mask.type===k?' selected':''}>${v.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Label</div>
+      <input class="field-input" id="pMaskLabel" value="${mask.label||''}">
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-dim);line-height:1.7">
+      ID: ${mask.id}<br>Drag white handles to adjust points.
+    </div>
+  `;
+}
+
+// Wire mask points into existing mapCanvas click handler
+const _origCanvasClick = null;
+document.getElementById('mapCanvas').addEventListener('click', function(e) {
+  if (activeTool === 'mask') { addMaskPoint(e); }
+});
+
+// ═══════════════════════════════════════════════════
+// SEED DATA (for first run demo)
+// ═══════════════════════════════════════════════════
+function seedDemoData() {
+  if (world.entities.length || world.maps.length) return;
+  world.entities = [
+    { id:'entity_1', name:'Rusty Watering Can', category:'tool', rarity:'common', description:'A battered old can. Still holds water.', sprite:'', zone_requirements:[], effect:'speeds_growth', grow_time_hours:0, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'idle',label:'Idle'},{id:'collected',label:'Collected'}], interactions:[{trigger:'click',action:'collect',reward:'water_charge'}] },
+    { id:'entity_2', name:'Wildflower Seed', category:'plant', rarity:'common', description:'Hardy seeds that bloom anywhere.', sprite:'', zone_requirements:[], effect:'restores_soil', grow_time_hours:24, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'seed',label:'Seed'},{id:'sprout',label:'Sprout'},{id:'bloom',label:'Bloom'}], interactions:[{trigger:'water',action:'grow',reward:''}] },
+    { id:'entity_3', name:'Saguaro Seedling', category:'plant', rarity:'uncommon', description:'Slow-growing desert giant. Requires warm zone.', sprite:'', zone_requirements:[9,10,11,12], effect:'restores_soil', grow_time_hours:72, collectible:false, interactable:true, hidden:false, tradeable:true, states:[{id:'seedling',label:'Seedling'},{id:'juvenile',label:'Juvenile'},{id:'mature',label:'Mature'}], interactions:[{trigger:'water',action:'grow',reward:''}] },
+    { id:'entity_4', name:'Old Trowel', category:'tool', rarity:'common', description:'Worn but reliable.', sprite:'', zone_requirements:[], effect:'', grow_time_hours:0, collectible:true, interactable:true, hidden:true, tradeable:true, states:[{id:'idle',label:'Hidden'},{id:'found',label:'Found'}], interactions:[{trigger:'inspect',action:'reveal',reward:'trowel'}] },
+    { id:'entity_5', name:'Broken Greenhouse', category:'building', rarity:'rare', description:'Restore it to shelter cold-zone plants.', sprite:'', zone_requirements:[], effect:'provides_shelter', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'ruined',label:'Ruined'},{id:'restoring',label:'Restoring'},{id:'restored',label:'Restored'}], interactions:[{trigger:'click',action:'restore',reward:'shelter_bonus'}] },
+    { id:'entity_6', name:'Litter Pile', category:'hazard', rarity:'common', description:'Must be cleared before planting.', sprite:'', zone_requirements:[], effect:'blocks_hazard', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'present',label:'Present'},{id:'cleared',label:'Cleared'}], interactions:[{trigger:'click',action:'collect',reward:'5_coins'}] }
+  ];
+  world.maps = [
+    { id:'map_1', name:'Abandoned Corner Lot', type:'top-down', zone:6, blight_level:80, description:'A neglected urban lot, thick with litter and cracked concrete.', background:null, portals:[{id:'portal_1',to:'map_2',label:'Shed Door',requires_level:0,x:0.85,y:0.6}], objects:[
+      {id:'obj_1',entity_id:'entity_6',label:'',x:0.3,y:0.4,state:'present',size:48,z_order:5,notes:''},
+      {id:'obj_2',entity_id:'entity_6',label:'',x:0.5,y:0.55,state:'present',size:48,z_order:5,notes:''},
+      {id:'obj_3',entity_id:'entity_4',label:'',x:0.7,y:0.3,state:'idle',size:36,z_order:8,notes:'Hidden under debris'},
+      {id:'obj_portal_1',entity_id:null,type:'portal',label:'Shed Door',x:0.85,y:0.6,state:'idle',size:52,z_order:20,portal_id:'portal_1'}
+    ]},
+    { id:'map_2', name:'Garden Shed', type:'side-view', zone:6, blight_level:40, description:'A dusty shed. Tools hang on the walls. Something stirs in the corner.', background:null, portals:[{id:'portal_2',to:'map_1',label:'Back Outside',requires_level:0,x:0.1,y:0.7}], objects:[
+      {id:'obj_4',entity_id:'entity_1',label:'',x:0.6,y:0.65,state:'idle',size:52,z_order:10,notes:''},
+      {id:'obj_5',entity_id:'entity_3',label:'',x:0.3,y:0.5,state:'seedling',size:44,z_order:10,notes:''},
+      {id:'obj_portal_2',entity_id:null,type:'portal',label:'Back Outside',x:0.1,y:0.7,state:'idle',size:52,z_order:20,portal_id:'portal_2'}
+    ]}
+  ];
+  saveWorld();
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+loadWorld();
+seedDemoData();
+renderMapList();
+renderEntityList();
+renderCanvas();
+renderMapProps();
+</script>
+</body>
+</html>
