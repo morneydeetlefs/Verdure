@@ -692,34 +692,35 @@ async function init() {
   loadPlayer();
   setLoad(30, 'Loading world…');
 
-  // Try fetch world.json from same directory
-  try {
-    const res = await fetch('../data/world.json');
-    if (res.ok) {
-      world = await res.json();
-      setLoad(80, 'Building world…');
-      startGame();
-      return;
-    }
-  } catch(e) {}
+  // Skip fetch entirely on file:// — it will always be blocked by CORS
+  if (location.protocol === 'file:') {
+    setLoad(100, 'Ready');
+    setTimeout(() => {
+      document.getElementById('loadScreen').style.display = 'none';
+      document.getElementById('worldPickWrap').style.display = 'flex';
+    }, 300);
+    return;
+  }
 
-  // Try same-dir world.json
-  try {
-    const res = await fetch('world.json');
-    if (res.ok) {
-      world = await res.json();
-      setLoad(80, 'Building world…');
-      startGame();
-      return;
-    }
-  } catch(e) {}
+  // On http/https try to auto-load world.json
+  for (const path of ['../data/world.json', 'world.json', 'data/world.json']) {
+    try {
+      const res = await fetch(path);
+      if (res.ok) {
+        world = await res.json();
+        setLoad(80, 'Building world…');
+        startGame();
+        return;
+      }
+    } catch(e) {}
+  }
 
   // Fallback: ask user to pick file
   setLoad(100, 'Ready');
   setTimeout(() => {
     document.getElementById('loadScreen').style.display = 'none';
     document.getElementById('worldPickWrap').style.display = 'flex';
-  }, 400);
+  }, 300);
 }
 
 function setLoad(pct, msg) {
@@ -1068,110 +1069,6 @@ function quickCollect(objId) {
   doCollect(obj, entity, {reward:''});
 }
 
-function doCollect(obj, entity, ix) {
-  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
-  player.map_states[currentMapId][obj.id] = {
-    ...player.map_states[currentMapId][obj.id],
-    state: 'collected', collected: true, collected_at: Date.now()
-  };
-  addToInventory(obj.entity_id, 1);
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(entity.category === 'hazard' ? XP_REWARDS.clear_hazard : XP_REWARDS.collect, 'collect');
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  showToast(`Collected ${entity.name}`);
-}
-
-function doGrow(obj, entity, ix) {
-  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
-  const objState = player.map_states[currentMapId][obj.id] || {};
-  const states = entity.states || [{id:'idle'}];
-  const currentState = objState.state || obj.state || states[0].id;
-  const ci = states.findIndex(s=>s.id===currentState);
-  const nextState = states[Math.min(ci+1, states.length-1)];
-
-  player.map_states[currentMapId][obj.id] = {
-    ...objState, state: nextState.id,
-    planted_at: ci === 0 ? Date.now() : objState.planted_at
-  };
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(XP_REWARDS.grow, 'grow');
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  showToast(`${entity.name} → ${nextState.label||nextState.id}`);
-}
-
-function doPlant(obj, entity, ix) {
-  // Check place_requires
-  const unmet = (entity.place_requires||[]).find(rid => !hasItemInInventory(rid));
-  if (unmet) {
-    const req = world.entities?.find(e=>e.id===unmet);
-    showToast(`Need ${req?.name||'required tool'} to plant`, 'error'); return;
-  }
-  doGrow(obj, entity, ix);
-  giveXP(XP_REWARDS.plant - XP_REWARDS.grow, 'plant');
-}
-
-function doHarvest(obj, entity, ix) {
-  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
-  const objState = player.map_states[currentMapId][obj.id] || {};
-  const states = entity.states||[{id:'idle'}];
-  const lastState = states[states.length-1];
-  const currentState = objState.state||obj.state||states[0].id;
-  if (currentState !== lastState.id) {
-    showToast(`${entity.name} isn't ready to harvest yet`,'error'); return;
-  }
-  if (ix.reward) giveReward(ix.reward);
-  // Reset to first state if respawning
-  player.map_states[currentMapId][obj.id] = {
-    ...objState,
-    state: entity.respawn ? states[0].id : 'harvested',
-    collected: !entity.respawn,
-    respawn_at: entity.respawn ? Date.now() + (entity.respawn_hours||24)*3600000 : null
-  };
-  giveXP(XP_REWARDS.harvest, 'harvest');
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  showToast(`Harvested ${entity.name}`);
-}
-
-function doReveal(obj, entity, ix) {
-  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
-  player.map_states[currentMapId][obj.id] = {
-    ...player.map_states[currentMapId][obj.id], state:'found'
-  };
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(XP_REWARDS.collect+5, 'reveal');
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  showToast(`Discovered: ${entity.name}!`);
-}
-
-function doTransform(obj, entity, ix) {
-  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
-  const states = entity.states||[{id:'idle'}];
-  const objState = player.map_states[currentMapId][obj.id] || {};
-  const ci = states.findIndex(s=>s.id===(objState.state||obj.state||states[0].id));
-  const next = states[Math.min(ci+1,states.length-1)];
-  player.map_states[currentMapId][obj.id] = {...objState, state:next.id};
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(10, 'transform');
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  showToast(`${entity.name} transformed to ${next.label||next.id}`);
-}
-
-function doReward(obj, entity, ix) {
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(10, 'reward');
-  showToast(`Reward: ${ix.reward||'nothing'}`);
-}
-
 // ══════════════════════════════════════════════════════
 // DIALOG SYSTEM
 // ══════════════════════════════════════════════════════
@@ -1210,7 +1107,7 @@ function showDialogNode(dlg, nodeId) {
   }
 
   box.innerHTML = html;
-  giveXP(XP_REWARDS.dialog, 'dialog');
+  giveXP(XP_REWARDS.dialog);
 }
 
 function onDialogChoice(dialogId, nextNodeId, reward) {
@@ -1242,6 +1139,25 @@ function addToInventory(entityId, qty) {
   updateInventoryUI();
 }
 
+function updateInventoryUI() {
+  const container = document.getElementById('invSlots');
+  if (!container) return;
+  const inv = player.inventory?.filter(i=>i.quantity>0) || [];
+  if (!inv.length) { container.innerHTML = '<div class="inv-empty">Empty</div>'; return; }
+  container.innerHTML = inv.map(slot => {
+    const entity = world.entities?.find(e=>e.id===slot.entity_id);
+    if (!entity) return '';
+    const visual = entity.sprite
+      ? `<img class="inv-slot-img" src="${entity.sprite}" draggable="false">`
+      : `<div class="inv-slot-icon">${CATEGORY_ICONS[entity.category]||'📦'}</div>`;
+    return `<div class="inv-slot" title="${entity.name}" onclick="selectInventoryItem('${slot.entity_id}')">
+      ${visual}
+      <div class="inv-slot-name">${entity.name}</div>
+      ${slot.quantity>1?`<div class="inv-slot-qty">×${slot.quantity}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
 function giveReward(rewardStr) {
   if (!rewardStr) return;
   // Try to match entity name or id
@@ -1252,19 +1168,6 @@ function giveReward(rewardStr) {
   else if (rewardStr.match(/^\d+_coins$/)) {
     showToast(`+${rewardStr.replace('_coins','')} 🪙`,'xp');
   }
-}
-
-function giveXP(amount, type) {
-  if (!amount) return;
-  player.xp = (player.xp||0) + amount;
-  const xpForNext = player.level * XP_PER_LEVEL;
-  if (player.xp >= xpForNext) {
-    player.xp -= xpForNext;
-    player.level = (player.level||1) + 1;
-    showToast(`🎉 Level up! Now level ${player.level}`,'xp');
-  }
-  savePlayer();
-  updateHUD();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1328,68 +1231,8 @@ function formatDuration(ms) {
 }
 
 // ══════════════════════════════════════════════════════
-// HUD
-// ══════════════════════════════════════════════════════
-function updateHUD() {
-  // Player
-  document.getElementById('hudPlayerName').textContent = player.name;
-  const xpNeeded = player.level * XP_PER_LEVEL;
-  document.getElementById('hudLevel').textContent = `LVL ${player.level} · ${player.xp}/${xpNeeded} XP`;
-  document.getElementById('xpBar').style.width = (player.xp / xpNeeded * 100) + '%';
-
-  // Map
-  const map = world?.maps?.find(m=>m.id===currentMapId);
-  if (map) {
-    document.getElementById('hudMapName').textContent = map.name;
-    document.getElementById('hudMapMeta').textContent = `Zone ${map.zone} · ${map.type}`;
-    document.getElementById('blightBar').style.width = (map.blight_level||0) + '%';
-  }
-
-  updateInventoryUI();
-}
-
-function updateInventoryUI() {
-  const container = document.getElementById('invSlots');
-  const inv = player.inventory?.filter(i=>i.quantity>0) || [];
-
-  if (!inv.length) {
-    container.innerHTML = '<div class="inv-empty">Empty</div>';
-    return;
-  }
-
-  container.innerHTML = inv.map(slot => {
-    const entity = world.entities?.find(e=>e.id===slot.entity_id);
-    if (!entity) return '';
-    const visual = entity.sprite
-      ? `<img class="inv-slot-img" src="${entity.sprite}" draggable="false">`
-      : `<div class="inv-slot-icon">${CATEGORY_ICONS[entity.category]||'📦'}</div>`;
-    return `<div class="inv-slot" title="${entity.name}" onclick="selectInventoryItem('${slot.entity_id}')">
-      ${visual}
-      <div class="inv-slot-name">${entity.name}</div>
-      ${slot.quantity>1?`<div class="inv-slot-qty">×${slot.quantity}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-function selectInventoryItem(entityId) {
-  document.querySelectorAll('.inv-slot').forEach(s => s.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  const entity = world.entities?.find(e=>e.id===entityId);
-  if (entity) showToast(`Selected: ${entity.name}`);
-}
-
-// ══════════════════════════════════════════════════════
 // TOGGLES
 // ══════════════════════════════════════════════════════
-function toggleLabels() {
-  showLabels = !showLabels;
-  document.querySelectorAll('.obj-label').forEach(el => {
-    el.textContent = showLabels ? el.dataset.label || el.textContent : '';
-  });
-  const map = world.maps.find(m=>m.id===currentMapId);
-  if (map) renderObjects(map);
-}
-
 function toggleMasks() {
   showMasksOverlay = !showMasksOverlay;
   const map = world.maps.find(m=>m.id===currentMapId);
@@ -1622,10 +1465,6 @@ function isObjectVisible(obj, entity) {
   return os?.state === 'found' || os?.revealed === true;
 }
 
-// Patch renderObjects to hide hidden objects
-const _origRenderObjects = renderObjects;
-// (handled inline in renderObjects via isObjectVisible check already inserted below)
-
 // ══════════════════════════════════════════════════════
 // PARTICLE EFFECTS
 // ══════════════════════════════════════════════════════
@@ -1637,21 +1476,6 @@ function spawnParticle(x, y, content, isXP = false) {
   p.style.top = (y - 12) + 'px';
   document.body.appendChild(p);
   setTimeout(() => p.remove(), 1400);
-}
-
-function spawnXPParticle(x, y, amount) {
-  spawnParticle(x, y, `+${amount} XP`, true);
-}
-
-// Patch giveXP to spawn particles
-const _origGiveXP = giveXP;
-function giveXP(amount, type) {
-  if (!amount) return;
-  // Find approximate screen centre for particle
-  const stage = document.getElementById('mapStage');
-  const r = stage?.getBoundingClientRect();
-  if (r) spawnXPParticle(r.left + r.width/2, r.top + r.height - 60, amount);
-  _origGiveXP(amount, type);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1755,71 +1579,310 @@ function minimapNavigate(mapId) {
 }
 
 // ══════════════════════════════════════════════════════
-// PATCH EXISTING SYSTEMS
+// CONSOLIDATED FUNCTION DEFINITIONS
+// (replaces original stubs — all logic lives here)
 // ══════════════════════════════════════════════════════
 
-// Patch doCollect to use energy
-const _origDoCollect = doCollect;
 function doCollect(obj, entity, ix) {
   const energyAction = entity.category === 'hazard' ? 'clear_hazard' : 'collect';
   if (!useEnergy(energyAction)) return;
-  _origDoCollect(obj, entity, ix);
-  // Particle effect
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  player.map_states[currentMapId][obj.id] = {
+    ...player.map_states[currentMapId][obj.id],
+    state: 'collected', collected: true, collected_at: Date.now()
+  };
+  addToInventory(obj.entity_id, 1);
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(entity.category === 'hazard' ? XP_REWARDS.clear_hazard : XP_REWARDS.collect);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
   const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
-  if (el) {
-    const r = el.getBoundingClientRect();
-    spawnParticle(r.left + r.width/2, r.top, CATEGORY_ICONS[entity.category] || '✨');
-  }
+  if (el) { const r = el.getBoundingClientRect(); spawnParticle(r.left + r.width/2, r.top, CATEGORY_ICONS[entity.category]||'✨'); }
+  showToast(`Collected ${entity.name}`);
 }
 
-// Patch doHarvest to use energy
-const _origDoHarvest = doHarvest;
-function doHarvest(obj, entity, ix) {
-  if (!useEnergy('harvest')) return;
-  _origDoHarvest(obj, entity, ix);
-}
-
-// Patch doGrow to use energy
-const _origDoGrow = doGrow;
 function doGrow(obj, entity, ix) {
   if (!useEnergy('water')) return;
-  _origDoGrow(obj, entity, ix);
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  const objState = player.map_states[currentMapId][obj.id] || {};
+  const states = entity.states || [{id:'idle'}];
+  const currentState = objState.state || obj.state || states[0].id;
+  const ci = states.findIndex(s => s.id === currentState);
+  const nextState = states[Math.min(ci + 1, states.length - 1)];
+  player.map_states[currentMapId][obj.id] = {
+    ...objState, state: nextState.id,
+    planted_at: ci === 0 ? Date.now() : objState.planted_at
+  };
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(XP_REWARDS.grow);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
+  showToast(`${entity.name} → ${nextState.label||nextState.id}`);
 }
 
-// Patch doReveal to show flash animation
-const _origDoReveal = doReveal;
+function doHarvest(obj, entity, ix) {
+  if (!useEnergy('harvest')) return;
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  const objState = player.map_states[currentMapId][obj.id] || {};
+  const states = entity.states || [{id:'idle'}];
+  const lastState = states[states.length - 1];
+  const currentState = objState.state || obj.state || states[0].id;
+  if (currentState !== lastState.id) {
+    showToast(`${entity.name} isn't ready to harvest yet`, 'error'); return;
+  }
+  if (ix.reward) giveReward(ix.reward);
+  player.map_states[currentMapId][obj.id] = {
+    ...objState,
+    state: entity.respawn ? states[0].id : 'harvested',
+    collected: !entity.respawn,
+    respawn_at: entity.respawn ? Date.now() + (entity.respawn_hours||24)*3600000 : null
+  };
+  giveXP(XP_REWARDS.harvest);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
+  showToast(`Harvested ${entity.name}`);
+}
+
 function doReveal(obj, entity, ix) {
   if (!useEnergy('inspect')) return;
-  _origDoReveal(obj, entity, ix);
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  player.map_states[currentMapId][obj.id] = {
+    ...player.map_states[currentMapId][obj.id], state:'found', revealed:true
+  };
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(XP_REWARDS.collect + 5);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
   setTimeout(() => {
     const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
-    if (el) {
-      el.classList.add('just-revealed');
-      setTimeout(() => el.classList.remove('just-revealed'), 700);
-    }
+    if (el) { el.classList.add('just-revealed'); setTimeout(() => el.classList.remove('just-revealed'), 700); }
   }, 50);
+  showToast(`Discovered: ${entity.name}!`);
 }
 
-// Patch renderObjects to skip hidden entities
-const _baseRenderObjects = renderObjects;
+function doTransform(obj, entity, ix) {
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  const states = entity.states || [{id:'idle'}];
+  const objState = player.map_states[currentMapId][obj.id] || {};
+  const ci = states.findIndex(s => s.id === (objState.state||obj.state||states[0].id));
+  const next = states[Math.min(ci+1, states.length-1)];
+  player.map_states[currentMapId][obj.id] = {...objState, state:next.id};
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(10);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
+  showToast(`${entity.name} transformed to ${next.label||next.id}`);
+}
+
+function doReward(obj, entity, ix) {
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(10);
+  showToast(`Reward: ${ix.reward||'nothing'}`);
+}
+
+function doPlant(obj, entity, ix) {
+  const unmet = (entity.place_requires||[]).find(rid => !hasItemInInventory(rid));
+  if (unmet) {
+    const req = world.entities?.find(e => e.id === unmet);
+    showToast(`Need ${req?.name||'required tool'} to plant`, 'error'); return;
+  }
+  if (!useEnergy('plant')) return;
+  if (!player.map_states[currentMapId]) player.map_states[currentMapId] = {};
+  const objState = player.map_states[currentMapId][obj.id] || {};
+  const states = entity.states || [{id:'idle'}];
+  const currentState = objState.state || obj.state || states[0].id;
+  const ci = states.findIndex(s => s.id === currentState);
+  const nextState = states[Math.min(ci + 1, states.length - 1)];
+  player.map_states[currentMapId][obj.id] = {
+    ...objState, state: nextState.id, planted_at: Date.now()
+  };
+  if (ix.reward) giveReward(ix.reward);
+  giveXP(XP_REWARDS.plant);
+  savePlayer();
+  const map = world.maps.find(m => m.id === currentMapId);
+  renderObjects(map);
+  showToast(`${entity.name} planted → ${nextState.label||nextState.id}`);
+}
+
+function giveXP(amount) {
+  if (!amount) return;
+  player.xp = (player.xp||0) + amount;
+  const xpForNext = player.level * XP_PER_LEVEL;
+  if (player.xp >= xpForNext) {
+    player.xp -= xpForNext;
+    player.level = (player.level||1) + 1;
+    showToast(`🎉 Level up! Now level ${player.level}`, 'xp');
+  }
+  // Particle
+  const stage = document.getElementById('mapStage');
+  const r = stage?.getBoundingClientRect();
+  if (r) spawnParticle(r.left + r.width/2, r.top + r.height - 60, `+${amount} XP`, true);
+  savePlayer();
+  updateHUD();
+}
+
 function renderObjects(map) {
-  // Filter map objects — hidden entities only show if revealed
-  const originalObjects = map.objects;
-  map.objects = (originalObjects||[]).filter(obj => {
+  const layer = document.getElementById('objectLayer');
+  layer.innerHTML = '';
+  const objState = player.map_states[map.id] || {};
+  const sorted = [...(map.objects||[])].sort((a,b)=>(a.z_order||0)-(b.z_order||0));
+
+  sorted.forEach(obj => {
     const entity = world.entities?.find(e => e.id === obj.entity_id);
-    return isObjectVisible(obj, entity);
+    if (!entity && !isPortalObj(obj)) return;
+
+    // Hide hidden entities that haven't been revealed
+    if (entity?.hidden) {
+      const os = objState[obj.id];
+      if (os?.state !== 'found' && !os?.revealed) return;
+    }
+
+    const state = objState[obj.id]?.state || obj.state || 'idle';
+    const collected = objState[obj.id]?.collected || false;
+    if (collected && entity && !entity.respawn) return;
+
+    const size = obj.size || 48;
+    const label = obj.label || entity?.name || (isPortalObj(obj) ? '🚪 Portal' : 'Object');
+    const rotation = obj.rotation || 0;
+    const animClass = obj.animation && obj.animation !== 'none' ? `anim-${obj.animation}` : '';
+
+    const el = document.createElement('div');
+    el.className = `game-object ${animClass}`;
+    el.dataset.objId = obj.id;
+    el.style.left = (obj.x * 100) + '%';
+    el.style.top = (obj.y * 100) + '%';
+    el.style.zIndex = obj.z_order || 10;
+    if (rotation) el.style.transform = `translate(-50%,-50%) rotate(${rotation}deg)`;
+
+    const visual = document.createElement('div');
+    visual.className = 'obj-visual';
+    if (entity?.sprite) {
+      const img = document.createElement('img');
+      img.className = 'obj-sprite-img';
+      img.src = entity.sprite;
+      img.style.width = size + 'px'; img.style.height = size + 'px';
+      img.draggable = false;
+      visual.appendChild(img);
+    } else {
+      const icon = document.createElement('div');
+      icon.className = 'obj-icon-inner';
+      icon.style.width = size + 'px'; icon.style.height = size + 'px';
+      icon.style.fontSize = Math.round(size * 0.5) + 'px';
+      icon.textContent = entity ? (CATEGORY_ICONS[entity.category]||'📦') : '🚪';
+      visual.appendChild(icon);
+    }
+
+    // Grow badge
+    const planted = objState[obj.id]?.planted_at;
+    if (planted && entity?.grow_time_hours > 0) {
+      const remainMs = (entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier||1)) - (Date.now() - planted);
+      if (remainMs > 0) {
+        const badge = document.createElement('div');
+        badge.className = 'grow-badge';
+        badge.dataset.plantedAt = planted;
+        badge.dataset.growMs = entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier||1);
+        badge.textContent = formatDuration(remainMs);
+        visual.style.position = 'relative';
+        visual.appendChild(badge);
+      }
+    }
+
+    // State dot
+    if (state && state !== 'idle') {
+      const dot = document.createElement('div');
+      dot.style.cssText = 'position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--sprout);border:1px solid var(--soil);pointer-events:none';
+      visual.style.position = 'relative';
+      visual.appendChild(dot);
+    }
+
+    el.appendChild(visual);
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'obj-label';
+    labelEl.textContent = showLabels ? label : '';
+    el.appendChild(labelEl);
+
+    el.addEventListener('click', e => { e.stopPropagation(); handleObjectClick(obj, entity, el); });
+    layer.appendChild(el);
   });
-  _baseRenderObjects(map);
-  map.objects = originalObjects; // restore
 }
 
-// Patch selectInventoryItem to enter plant mode for plantable items
+function doEnterMap(map) {
+  stopAmbientSound();
+  currentMapId = map.id;
+  player.active_map = map.id;
+  if (!player.visited_maps.includes(map.id)) player.visited_maps.push(map.id);
+  if (!player.map_states[map.id]) player.map_states[map.id] = {};
+  savePlayer();
+  closeActionPopup();
+  closeDialog();
+
+  const bg = document.getElementById('mapBg');
+  const placeholder = document.getElementById('mapBgPlaceholder');
+  if (map.background) {
+    bg.src = map.background; bg.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    bg.style.display = 'none'; placeholder.style.display = 'flex';
+  }
+
+  renderObjects(map);
+  renderMaskOverlay(map);
+  updateHUD();
+  renderMinimap();
+  showMapBanner(map.name);
+  setTimeout(() => tickAmbientSounds(), 800);
+}
+
+function startGame() {
+  setLoad(95, 'Entering world…');
+  if (!world?.maps?.length) { alert('No maps found in world.json'); return; }
+
+  // First run check
+  const isFirstRun = !localStorage.getItem('verdure_player') ||
+    (!player.name || player.name === 'Gardener');
+  if (isFirstRun && !player.hasSetup) {
+    showPlayerSetup(); return;
+  }
+
+  const startMapId = player.active_map && world.maps.find(m=>m.id===player.active_map)
+    ? player.active_map
+    : world.maps[0].id;
+
+  setTimeout(() => {
+    document.getElementById('loadScreen').style.display = 'none';
+    document.getElementById('gameWrap').style.display = 'flex';
+    enterMap(startMapId, false);
+    updateHUD();
+    startGrowTimer();
+  }, 400);
+}
+
+function updateHUD() {
+  document.getElementById('hudPlayerName').textContent = player.name || 'Gardener';
+  const xpNeeded = player.level * XP_PER_LEVEL;
+  document.getElementById('hudLevel').textContent = `LVL ${player.level} · ${player.xp}/${xpNeeded} XP`;
+  document.getElementById('xpBar').style.width = (player.xp / xpNeeded * 100) + '%';
+  const map = world?.maps?.find(m=>m.id===currentMapId);
+  if (map) {
+    document.getElementById('hudMapName').textContent = map.name;
+    document.getElementById('hudMapMeta').textContent = `Zone ${map.zone} · ${map.type}`;
+    document.getElementById('blightBar').style.width = (map.blight_level||0) + '%';
+  }
+  updateInventoryUI();
+  updateEnergyUI();
+}
+
 function selectInventoryItem(entityId) {
   document.querySelectorAll('.inv-slot').forEach(s => s.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  if (event?.currentTarget) event.currentTarget.classList.add('active');
   const entity = world.entities?.find(e => e.id === entityId);
   if (!entity) return;
-  // If it's a plant or has a plant interaction, offer to plant it
   if (entity.category === 'plant' || (entity.interactions||[]).some(ix=>ix.action==='plant')) {
     enterPlantMode(entityId);
   } else {
@@ -1827,37 +1890,32 @@ function selectInventoryItem(entityId) {
   }
 }
 
-// Patch doEnterMap to handle ambient sound
-const _origDoEnterMap = doEnterMap;
-function doEnterMap(map) {
-  stopAmbientSound();
-  _origDoEnterMap(map);
-  setTimeout(() => tickAmbientSounds(), 800);
-  renderMinimap();
-}
-
-// Patch startGame to check for first run
-const _origStartGame = startGame;
-function startGame() {
-  if (!player.name || player.name === 'Gardener') {
-    // Check if truly first run
-    const saved = localStorage.getItem('verdure_player');
-    if (!saved) { showPlayerSetup(); return; }
-  }
-  _origStartGame();
-}
-
-// Patch updateHUD to include energy
-const _origUpdateHUD = updateHUD;
-function updateHUD() {
-  _origUpdateHUD();
-  updateEnergyUI();
+function confirmPlayerSetup() {
+  const name = document.getElementById('playerNameInput')?.value.trim();
+  if (!name) { showToast('Enter your name first', 'error'); return; }
+  player.name = name;
+  player.energy = MAX_ENERGY;
+  player.last_regen = Date.now();
+  player.hasSetup = true;
+  savePlayer();
+  document.getElementById('playerSetupWrap').style.display = 'none';
+  document.getElementById('loadScreen').style.display = 'flex';
+  setLoad(80, 'Building world…');
+  // Call startGame directly — player is now set up
+  setLoad(95, 'Entering world…');
+  const startMapId = world.maps[0].id;
+  setTimeout(() => {
+    document.getElementById('loadScreen').style.display = 'none';
+    document.getElementById('gameWrap').style.display = 'flex';
+    enterMap(startMapId, false);
+    updateHUD();
+    startGrowTimer();
+  }, 400);
 }
 
 // ══════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════
-init();
-</script>
+init();</script>
 </body>
 </html>
