@@ -108,14 +108,25 @@
   /* ── OBJECTS ── */
   .game-object {
     position: absolute;
-    transform: translate(-50%, -50%);
+    /* translate+rotate applied inline — no CSS transform here so rotation & animation don't fight */
     cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     transition: filter 0.12s;
   }
-  .game-object:hover .obj-visual { filter: brightness(1.3); }
+  .game-object:hover { filter: brightness(1.15); }
   .game-object.in-range .obj-visual { filter: drop-shadow(0 0 6px var(--sprout)); }
   .game-object.not-in-range { cursor: default; }
+
+  /* Inner wrapper — animations only affect this element's transform, not the outer position */
+  .obj-anim-inner {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .obj-anim-inner.anim-sway   { animation: vd-sway   3s ease-in-out infinite; }
+  .obj-anim-inner.anim-jitter { animation: vd-jitter 0.3s linear infinite; }
+  .obj-anim-inner.anim-pop    { animation: vd-pop    1.8s ease-in-out infinite; }
+  .obj-anim-inner.anim-float  { animation: vd-float  2.5s ease-in-out infinite; }
+  .obj-anim-inner.anim-glow   { animation: vd-glow   2s ease-in-out infinite; }
+
   .obj-visual {
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
@@ -205,16 +216,12 @@
   }
 
   /* ── ANIMATIONS ── */
-  @keyframes vd-sway  { 0%,100%{transform:translate(-50%,-50%) rotate(-4deg)}50%{transform:translate(-50%,-50%) rotate(4deg)} }
-  @keyframes vd-jitter{ 0%,100%{transform:translate(-50%,-50%) translate(0,0)}25%{transform:translate(-50%,-50%) translate(-2px,1px)}50%{transform:translate(-50%,-50%) translate(2px,-1px)}75%{transform:translate(-50%,-50%) translate(-1px,2px)} }
-  @keyframes vd-pop   { 0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.12)} }
-  @keyframes vd-float { 0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-6px)} }
-  @keyframes vd-glow  { 0%,100%{opacity:1;filter:brightness(1)}50%{opacity:0.65;filter:brightness(1.7)} }
-  .anim-sway  { animation: vd-sway   3s ease-in-out infinite; }
-  .anim-jitter{ animation: vd-jitter 0.3s linear infinite; }
-  .anim-pop   { animation: vd-pop    1.8s ease-in-out infinite; }
-  .anim-float { animation: vd-float  2.5s ease-in-out infinite; }
-  .anim-glow  { animation: vd-glow   2s ease-in-out infinite; }
+  /* No translate() in keyframes — rotation lives on outer .game-object inline style */
+  @keyframes vd-sway   { 0%,100%{transform:rotate(-4deg)}  50%{transform:rotate(4deg)} }
+  @keyframes vd-jitter { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 50%{transform:translate(2px,-1px)} 75%{transform:translate(-1px,2px)} }
+  @keyframes vd-pop    { 0%,100%{transform:scale(1)}        50%{transform:scale(1.12)} }
+  @keyframes vd-float  { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-6px)} }
+  @keyframes vd-glow   { 0%,100%{opacity:1;filter:brightness(1)} 50%{opacity:0.65;filter:brightness(1.7)} }
 
   /* ── HUD ── */
   #hud {
@@ -1751,13 +1758,19 @@ function renderObjects(map) {
     const rotation = obj.rotation || 0;
     const animClass = obj.animation && obj.animation !== 'none' ? `anim-${obj.animation}` : '';
 
+    // Outer element: always translate(-50%,-50%) + optional rotation
+    // This keeps position anchored to x/y regardless of animation
     const el = document.createElement('div');
-    el.className = `game-object ${animClass}`;
+    el.className = 'game-object';
     el.dataset.objId = obj.id;
     el.style.left = (obj.x * 100) + '%';
-    el.style.top = (obj.y * 100) + '%';
+    el.style.top  = (obj.y * 100) + '%';
     el.style.zIndex = obj.z_order || 10;
-    if (rotation) el.style.transform = `translate(-50%,-50%) rotate(${rotation}deg)`;
+    el.style.transform = `translate(-50%,-50%)${rotation ? ` rotate(${rotation}deg)` : ''}`;
+
+    // Inner animation wrapper — animation keyframes only affect this element
+    const animWrap = document.createElement('div');
+    animWrap.className = `obj-anim-inner${animClass ? ' ' + animClass : ''}`;
 
     const visual = document.createElement('div');
     visual.className = 'obj-visual';
@@ -1800,13 +1813,14 @@ function renderObjects(map) {
       visual.appendChild(dot);
     }
 
-    el.appendChild(visual);
+    animWrap.appendChild(visual);
 
     const labelEl = document.createElement('div');
     labelEl.className = 'obj-label';
     labelEl.textContent = showLabels ? label : '';
-    el.appendChild(labelEl);
+    animWrap.appendChild(labelEl);
 
+    el.appendChild(animWrap);
     el.addEventListener('click', e => { e.stopPropagation(); handleObjectClick(obj, entity, el); });
     layer.appendChild(el);
   });
