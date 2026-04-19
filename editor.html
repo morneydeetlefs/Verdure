@@ -210,9 +210,9 @@
     flex: 1;
     overflow: auto;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 24px;
+    padding: 20px;
     position: relative;
   }
   .canvas-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -226,14 +226,21 @@
     overflow: hidden;
     cursor: crosshair;
     box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    /* Fluid canvas — fills available space at 16:9 */
+    width: 100%;
+    max-width: 960px;
+    aspect-ratio: 16 / 9;
+    flex-shrink: 0;
   }
 
   #mapBg {
     width: 100%; height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
     display: block;
     pointer-events: none;
     user-select: none;
+    background: #1a1410;
   }
 
   #mapBgPlaceholder {
@@ -254,15 +261,27 @@
 
   .placed-object {
     position: absolute;
-    transform: translate(-50%, -50%);
+    /* Rotation is applied via inline style on this element */
     cursor: pointer;
     display: flex; flex-direction: column; align-items: center;
     gap: 2px;
     transition: filter 0.1s;
+    /* Base translate is handled inline so rotation can stack on top */
   }
   .placed-object:hover { filter: brightness(1.25); }
   .placed-object.selected .obj-icon { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 4px; }
   .placed-object.selected .obj-sprite { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 4px; }
+
+  /* Animation wrapper sits INSIDE the placed-object so it doesn't fight transform */
+  .obj-anim-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .obj-anim-wrap.anim-sway   { animation: verdure-sway   3s ease-in-out infinite; }
+  .obj-anim-wrap.anim-jitter { animation: verdure-jitter 0.3s linear infinite; }
+  .obj-anim-wrap.anim-pop    { animation: verdure-pop    1.8s ease-in-out infinite; }
+  .obj-anim-wrap.anim-float  { animation: verdure-float  2.5s ease-in-out infinite; }
+  .obj-anim-wrap.anim-glow   { animation: verdure-glow   2s ease-in-out infinite; }
+
   .obj-icon {
     background: var(--panel-bg);
     border: 2px solid var(--border);
@@ -467,33 +486,30 @@
   .interaction-row-top { display: flex; gap: 6px; }
 
   /* ── ANIMATIONS ── */
+  /* These apply to .obj-anim-wrap (inner element) so they don't interfere with
+     the outer .placed-object's translate+rotate transform */
   @keyframes verdure-sway {
-    0%,100% { transform: translate(-50%,-50%) rotate(-4deg); }
-    50%      { transform: translate(-50%,-50%) rotate(4deg); }
+    0%,100% { transform: rotate(-4deg); }
+    50%     { transform: rotate(4deg); }
   }
   @keyframes verdure-jitter {
-    0%,100% { transform: translate(-50%,-50%) translate(0,0); }
-    25%     { transform: translate(-50%,-50%) translate(-2px,1px); }
-    50%     { transform: translate(-50%,-50%) translate(2px,-1px); }
-    75%     { transform: translate(-50%,-50%) translate(-1px,2px); }
+    0%,100% { transform: translate(0,0); }
+    25%     { transform: translate(-2px,1px); }
+    50%     { transform: translate(2px,-1px); }
+    75%     { transform: translate(-1px,2px); }
   }
   @keyframes verdure-pop {
-    0%,100% { transform: translate(-50%,-50%) scale(1); }
-    50%     { transform: translate(-50%,-50%) scale(1.12); }
+    0%,100% { transform: scale(1); }
+    50%     { transform: scale(1.12); }
   }
   @keyframes verdure-float {
-    0%,100% { transform: translate(-50%,-50%) translateY(0); }
-    50%     { transform: translate(-50%,-50%) translateY(-6px); }
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-6px); }
   }
   @keyframes verdure-glow {
     0%,100% { opacity: 1; filter: brightness(1); }
     50%     { opacity: 0.6; filter: brightness(1.6); }
   }
-  .anim-sway  { animation: verdure-sway  3s ease-in-out infinite; }
-  .anim-jitter{ animation: verdure-jitter 0.3s linear infinite; }
-  .anim-pop   { animation: verdure-pop   1.8s ease-in-out infinite; }
-  .anim-float { animation: verdure-float 2.5s ease-in-out infinite; }
-  .anim-glow  { animation: verdure-glow  2s ease-in-out infinite; }
 
   /* ── DIALOG EDITOR ── */
   .dialog-canvas {
@@ -828,7 +844,7 @@
       <div class="canvas-empty-state" id="canvasEmptyState">
         Select or create a map to begin
       </div>
-      <div id="mapCanvas" style="display:none;width:800px;height:540px;">
+      <div id="mapCanvas" style="display:none">
         <img id="mapBg" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;">
         <div id="mapBgPlaceholder" style="position:absolute;inset:0;" class="">
           <div class="big-icon">🌱</div>
@@ -1029,7 +1045,6 @@ function renderPlacedObjects() {
   const container = document.getElementById('placedObjects');
   if (!map) { container.innerHTML = ''; return; }
 
-  // Sort by z-order so higher z renders on top
   const sorted = [...(map.objects || [])].sort((a, b) => (a.z_order||0) - (b.z_order||0));
 
   container.innerHTML = sorted.map(obj => {
@@ -1040,7 +1055,10 @@ function renderPlacedObjects() {
     const isSelected = obj.id === selectedObjectId;
     const rotation = obj.rotation || 0;
     const animClass = obj.animation && obj.animation !== 'none' ? `anim-${obj.animation}` : '';
-    const rotStyle = rotation ? `transform:translate(-50%,-50%) rotate(${rotation}deg)` : '';
+
+    // Rotation lives on the outer element via translate+rotate combined
+    // Animation lives on the inner obj-anim-wrap — they no longer fight
+    const outerTransform = `translate(-50%,-50%)${rotation ? ` rotate(${rotation}deg)` : ''}`;
 
     let visual;
     if (entity?.sprite) {
@@ -1053,12 +1071,14 @@ function renderPlacedObjects() {
     }
 
     return `
-      <div class="placed-object ${isSelected ? 'selected' : ''} ${animClass}"
-           style="left:${obj.x*100}%;top:${obj.y*100}%;z-index:${zOrder};${rotStyle}"
+      <div class="placed-object ${isSelected ? 'selected' : ''}"
+           style="left:${obj.x*100}%;top:${obj.y*100}%;z-index:${zOrder};transform:${outerTransform}"
            onclick="selectObject(event,'${obj.id}')"
            onmousedown="startDrag(event,'${obj.id}')">
-        ${visual}
-        <div class="obj-label">${label}</div>
+        <div class="obj-anim-wrap ${animClass}">
+          ${visual}
+          <div class="obj-label">${label}</div>
+        </div>
       </div>`;
   }).join('');
 }
