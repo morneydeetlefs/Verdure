@@ -79,20 +79,47 @@
     flex: 1;
     flex-direction: column;
     overflow: hidden;
+    background: #0e0b08;
   }
 
   /* ── MAP STAGE ── */
-  #mapStage {
+  /* Must match editor 16:9 aspect ratio exactly so object positions are identical */
+  #stageOuter {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #0e0b08;
+    min-height: 0;
+  }
+
+  #mapStage {
     position: relative;
     overflow: hidden;
     cursor: default;
+    /* Always 16:9 — same coordinate space as the editor canvas */
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+    max-height: 100%;
+    flex-shrink: 0;
+  }
+
+  /* Constrain by height when viewport is short */
+  @media (max-aspect-ratio: 16/9) {
+    #mapStage {
+      width: auto;
+      height: 100%;
+    }
   }
 
   #mapBg {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
+    background: #1a1410;
     pointer-events: none;
     transition: opacity 0.4s;
   }
@@ -589,7 +616,8 @@
 <!-- MAIN GAME -->
 <div id="gameWrap">
 
-  <!-- MAP STAGE -->
+  <!-- MAP STAGE — 16:9 centred box matching editor canvas -->
+  <div id="stageOuter">
   <div id="mapStage">
     <img id="mapBg" src="" style="display:none">
     <div id="mapBgPlaceholder">🌿</div>
@@ -606,6 +634,7 @@
       <div class="minimap-header">Maps</div>
       <div class="minimap-maps" id="minimapMaps"></div>
     </div>
+  </div>
   </div>
 
   <!-- HUD -->
@@ -974,26 +1003,73 @@ function openActionPopup(obj, entity, el, interactions) {
   const rect = el.getBoundingClientRect();
   const stageRect = document.getElementById('mapStage').getBoundingClientRect();
 
-  let html = `<div class="action-popup-title">${entity.name}</div>`;
-  html += `<div class="action-sep"></div>`;
-
   const objState = player.map_states[currentMapId] || {};
   const currentState = objState[obj.id]?.state || obj.state || 'idle';
+  const states = entity.states || [{id:'idle'}];
+  const stateIdx = states.findIndex(s => s.id === currentState);
+  const isLastState = stateIdx >= states.length - 1;
+  const isFirstState = stateIdx <= 0;
 
-  // Show state
-  html += `<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--dim);padding:2px 12px">State: ${currentState}</div>`;
+  // State label with progress indicator
+  const stateLabel = states.find(s=>s.id===currentState)?.label || currentState;
+  const stateProgress = states.length > 1
+    ? ` (${stateIdx+1}/${states.length})`
+    : '';
+
+  // Check grow timer status
+  const plantedAt = objState[obj.id]?.planted_at;
+  const growMs = entity.grow_time_hours > 0
+    ? entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier||1)
+    : 0;
+  const growRemain = plantedAt && growMs > 0
+    ? growMs - (Date.now() - plantedAt)
+    : 0;
+  const isGrowing = growRemain > 0;
+
+  let html = `<div class="action-popup-title">${entity.name}</div>`;
+  html += `<div class="action-sep"></div>`;
+  html += `<div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--dim);padding:2px 12px">`;
+  html += `${stateLabel}${stateProgress}`;
+  if (isGrowing) html += ` · ⏱ ${formatDuration(growRemain)}`;
+  html += `</div>`;
   html += `<div class="action-sep"></div>`;
 
-  interactions.forEach((ix, i) => {
+  // Filter interactions by what makes sense for current state
+  const validInteractions = interactions.filter(ix => {
+    // harvest only valid at last state
+    if (ix.trigger === 'harvest' || ix.action === 'harvest') return isLastState;
+    // grow/water only valid if not at last state and not currently growing
+    if (ix.trigger === 'water' || ix.action === 'grow') return !isLastState;
+    // plant only valid at first state
+    if (ix.trigger === 'plant') return isFirstState;
+    // all others always valid
+    return true;
+  });
+
+  if (validInteractions.length === 0 && !entity.collectible) {
+    html += `<div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--dim);padding:4px 12px">No actions available in this state.</div>`;
+  }
+
+  validInteractions.forEach((ix, i) => {
+    // Find real index in full interactions array for fireInteraction
+    const realIdx = interactions.indexOf(ix);
     const hasReq = ix.requires_entity_id && !hasItemInInventory(ix.requires_entity_id);
     const reqEntity = ix.requires_entity_id ? world.entities?.find(e=>e.id===ix.requires_entity_id) : null;
     const triggerIcon = {click:'👆',collect:'🤲',water:'💧',harvest:'🌾',inspect:'🔍',plant:'🌱'}[ix.trigger]||'▶';
     const disabled = hasReq ? ' disabled' : '';
-    const title = hasReq ? ` title="Requires: ${reqEntity?.name||ix.requires_entity_id}"` : '';
-    html += `<button class="action-btn${disabled}"${title} onclick="fireInteraction('${obj.id}','${ix.trigger}',${i})">
+    const titleAttr = hasReq ? ` title="Requires: ${reqEntity?.name||ix.requires_entity_id}"` : '';
+
+    // Friendly label for action
+    const actionLabel = ix.trigger === 'water' ? 'Water'
+      : ix.trigger === 'harvest' ? 'Harvest'
+      : ix.trigger === 'inspect' ? 'Inspect'
+      : ix.trigger === 'collect' ? 'Collect'
+      : ix.trigger.charAt(0).toUpperCase() + ix.trigger.slice(1);
+
+    html += `<button class="action-btn${disabled}"${titleAttr} onclick="fireInteraction('${obj.id}','${ix.trigger}',${realIdx})">
       <span class="action-icon">${triggerIcon}</span>
-      ${ix.trigger.charAt(0).toUpperCase()+ix.trigger.slice(1)}
-      ${hasReq ? `<span style="font-size:0.65rem;color:var(--rust)">🔒</span>` : ''}
+      ${actionLabel}
+      ${hasReq ? `<span style="font-size:0.65rem;color:var(--rust)">🔒 ${reqEntity?.name||'tool needed'}</span>` : ''}
     </button>`;
   });
 
@@ -1002,19 +1078,19 @@ function openActionPopup(obj, entity, el, interactions) {
     html += `<button class="action-btn" onclick="quickCollect('${obj.id}')"><span class="action-icon">🤲</span> Collect</button>`;
   }
 
-  // Close
   html += `<div class="action-sep"></div>`;
   html += `<button class="action-btn" onclick="closeActionPopup()"><span class="action-icon">✕</span> Close</button>`;
 
   popup.innerHTML = html;
 
-  // Position popup above the object
-  let left = rect.left - stageRect.left + rect.width/2 - 70;
-  let top = rect.top - stageRect.top - 10;
-  left = Math.max(4, Math.min(left, stageRect.width - 148));
-  top = Math.max(4, top);
+  // Position popup — prefer above object, clamp to stage bounds
+  let left = rect.left - stageRect.left + rect.width/2 - 75;
+  let top  = rect.top  - stageRect.top  - popup.scrollHeight - 8;
+  if (top < 4) top = rect.top - stageRect.top + rect.height + 4;
+  left = Math.max(4, Math.min(left, stageRect.width - 155));
+  top  = Math.max(4, Math.min(top,  stageRect.height - 40));
   popup.style.left = left + 'px';
-  popup.style.top = top + 'px';
+  popup.style.top  = top  + 'px';
   popup.classList.add('open');
 }
 
@@ -1182,50 +1258,87 @@ function giveReward(rewardStr) {
 // ══════════════════════════════════════════════════════
 function startGrowTimer() {
   if (growTimerInterval) clearInterval(growTimerInterval);
-  growTimerInterval = setInterval(tickGrowTimers, 10000); // every 10s
+  growTimerInterval = setInterval(tickGrowTimers, 10000);
   tickGrowTimers();
+}
+
+function initGrowTimersForMap(map) {
+  // When entering a map, ensure any objects already in a growing state
+  // have a planted_at so their timer runs correctly.
+  if (!player.map_states[map.id]) player.map_states[map.id] = {};
+  const objStates = player.map_states[map.id];
+  let dirty = false;
+  (map.objects||[]).forEach(obj => {
+    const entity = world.entities?.find(e => e.id === obj.entity_id);
+    if (!entity || !entity.grow_time_hours) return;
+    const os = objStates[obj.id];
+    const states = entity.states || [{id:'idle'}];
+    const currentState = os?.state || obj.state || states[0].id;
+    const stateIdx = states.findIndex(s => s.id === currentState);
+    // If the object is in a non-first, non-last state and has no planted_at,
+    // initialise planted_at to now so it starts ticking from current state
+    if (stateIdx > 0 && stateIdx < states.length - 1 && !os?.planted_at) {
+      objStates[obj.id] = { ...os, state: currentState, planted_at: Date.now() };
+      dirty = true;
+    }
+  });
+  if (dirty) savePlayer();
 }
 
 function tickGrowTimers() {
   if (!world || !currentMapId) return;
-  const map = world.maps.find(m=>m.id===currentMapId);
+  const map = world.maps.find(m => m.id === currentMapId);
   if (!map) return;
   const objStates = player.map_states[currentMapId] || {};
   let changed = false;
 
   map.objects.forEach(obj => {
-    const entity = world.entities?.find(e=>e.id===obj.entity_id);
+    const entity = world.entities?.find(e => e.id === obj.entity_id);
     if (!entity || !entity.grow_time_hours) return;
     const os = objStates[obj.id];
     if (!os?.planted_at) return;
-    const growMs = entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier||1);
-    if (Date.now() - os.planted_at >= growMs) {
-      const states = entity.states||[{id:'idle'}];
-      const ci = states.findIndex(s=>s.id===os.state);
-      if (ci < states.length - 1) {
-        player.map_states[currentMapId][obj.id] = {...os, state:states[ci+1].id, planted_at:Date.now()};
+
+    const growMs = entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier || 1);
+    const elapsed = Date.now() - os.planted_at;
+
+    if (elapsed >= growMs) {
+      const states = entity.states || [{id:'idle'}];
+      const ci = states.findIndex(s => s.id === os.state);
+      if (ci >= 0 && ci < states.length - 1) {
+        const nextState = states[ci + 1];
+        // Calculate how much time overflowed past the grow threshold
+        // and carry it into the next state's timer — no time is lost
+        const overflow = elapsed - growMs;
+        const newPlantedAt = Date.now() - overflow;
+        objStates[obj.id] = {
+          ...os,
+          state: nextState.id,
+          planted_at: ci + 1 < states.length - 1 ? newPlantedAt : null
+          // planted_at is cleared at final state — no more ticking needed
+        };
         changed = true;
-        showToast(`${entity.name} grew to ${states[ci+1].label||states[ci+1].id}`);
+        showToast(`${entity.name} → ${nextState.label || nextState.id}`);
       }
     }
 
-    // Check respawn
+    // Respawn check
     if (os.respawn_at && Date.now() >= os.respawn_at) {
-      const states = entity.states||[{id:'idle'}];
-      player.map_states[currentMapId][obj.id] = {state:states[0].id, collected:false, respawn_at:null};
+      const states = entity.states || [{id:'idle'}];
+      objStates[obj.id] = { state: states[0].id, collected: false, respawn_at: null, planted_at: null };
       changed = true;
+      showToast(`${entity.name} has grown back`);
     }
   });
 
   if (changed) { savePlayer(); renderObjects(map); }
 
-  // Update grow badges
+  // Update grow countdown badges in DOM
   document.querySelectorAll('.grow-badge').forEach(badge => {
     const plantedAt = parseInt(badge.dataset.plantedAt);
-    const growMs = parseInt(badge.dataset.growMs);
+    const growMs    = parseInt(badge.dataset.growMs);
+    if (!plantedAt || !growMs) return;
     const remain = growMs - (Date.now() - plantedAt);
-    if (remain > 0) badge.textContent = formatDuration(remain);
-    else badge.textContent = 'Ready!';
+    badge.textContent = remain > 0 ? formatDuration(remain) : 'Ready!';
   });
 }
 
@@ -1616,17 +1729,23 @@ function doGrow(obj, entity, ix) {
   const states = entity.states || [{id:'idle'}];
   const currentState = objState.state || obj.state || states[0].id;
   const ci = states.findIndex(s => s.id === currentState);
-  const nextState = states[Math.min(ci + 1, states.length - 1)];
+  const nextIdx = Math.min(ci + 1, states.length - 1);
+  const nextState = states[nextIdx];
+  // planted_at marks when this state transition began
+  // Only set it if advancing (not already at final state)
+  const isAdvancing = nextIdx > ci;
+  const newPlantedAt = isAdvancing && nextIdx < states.length - 1 ? Date.now() : null;
   player.map_states[currentMapId][obj.id] = {
-    ...objState, state: nextState.id,
-    planted_at: ci === 0 ? Date.now() : objState.planted_at
+    ...objState,
+    state: nextState.id,
+    planted_at: isAdvancing ? newPlantedAt : objState.planted_at
   };
   if (ix.reward) giveReward(ix.reward);
   giveXP(XP_REWARDS.grow);
   savePlayer();
   const map = world.maps.find(m => m.id === currentMapId);
   renderObjects(map);
-  showToast(`${entity.name} → ${nextState.label||nextState.id}`);
+  showToast(`${entity.name} → ${nextState.label || nextState.id}`);
 }
 
 function doHarvest(obj, entity, ix) {
@@ -1847,6 +1966,7 @@ function doEnterMap(map) {
 
   renderObjects(map);
   renderMaskOverlay(map);
+  initGrowTimersForMap(map);
   updateHUD();
   renderMinimap();
   showMapBanner(map.name);
