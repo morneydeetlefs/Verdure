@@ -484,6 +484,14 @@
     gap: 6px;
   }
   .interaction-row-top { display: flex; gap: 6px; }
+  /* requirement list inside each interaction */
+  .req-list { display: flex; flex-direction: column; gap: 4px; }
+  .req-row  { display: flex; gap: 6px; align-items: center; }
+  .req-row .field-input { flex: 1; font-size: 0.75rem; }
+  /* required-states checkboxes */
+  .state-checks { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 4px 0; }
+  .state-check  { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; cursor: pointer; }
+  .state-check input { margin: 0; cursor: pointer; accent-color: var(--leaf); }
 
   /* ── ANIMATIONS ── */
   /* These apply to .obj-anim-wrap (inner element) so they don't interfere with
@@ -845,7 +853,7 @@
         Select or create a map to begin
       </div>
       <div id="mapCanvas" style="display:none">
-        <img id="mapBg" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;">
+        <img id="mapBg" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#1a1410;pointer-events:none;user-select:none">
         <div id="mapBgPlaceholder" style="position:absolute;inset:0;" class="">
           <div class="big-icon">🌱</div>
           <div>Upload a background image</div>
@@ -853,7 +861,7 @@
         </div>
         <svg id="maskLayer" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:50"></svg>
         <canvas id="maskDrawCanvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:51;display:none"></canvas>
-        <div id="placedObjects"></div>
+        <div id="placedObjects" style="position:absolute;inset:0;z-index:10"></div>
       </div>
     </div>
     <input type="file" id="bgFileInput" accept="image/*" style="display:none" onchange="loadBgImage(event)">
@@ -1794,6 +1802,7 @@ function selectEntity(id) {
 
 function renderEntityForm() {
   const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity) migrateInteractions(entity); // ensure new schema fields exist
   const form = document.getElementById('entityForm');
   if (!entity) {
     form.innerHTML = `<div class="empty-state"><div class="es-icon">🌾</div><div>Select an entity to edit</div></div>`;
@@ -1989,15 +1998,48 @@ function renderEntityForm() {
                 </div>
               ` : ''}
               <input class="field-input" placeholder="reward (e.g. seed_packet, 10_coins)" value="${ix.reward||''}" oninput="updateInteraction(${i},'reward',this.value)">
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">🔧 Requires:</div>
-                <select class="field-input" style="flex:1;font-size:0.75rem" onchange="updateInteraction(${i},'requires_entity_id',this.value)">
-                  <option value="">none (always available)</option>
-                  ${world.entities.filter(e=>e.id!==entity.id).map(e=>`
-                    <option value="${e.id}" ${ix.requires_entity_id===e.id?'selected':''}>${CATEGORY_ICONS[e.category]||''} ${e.name}</option>
+              <!-- Required items (multiple) -->
+              <div>
+                <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);margin-bottom:3px">
+                  🔧 Requires items:
+                  <button class="btn" style="padding:1px 6px;font-size:0.62rem;margin-left:6px" onclick="addInteractionReq(${i})">+ Add</button>
+                </div>
+                <div class="req-list" id="reqList_${i}">
+                  ${(ix.requires||[]).map((r,ri)=>`
+                    <div class="req-row">
+                      <select class="field-input" onchange="updateInteractionReq(${i},${ri},this.value)">
+                        <option value="">— select item —</option>
+                        ${world.entities.filter(e=>e.id!==entity.id).map(e=>`
+                          <option value="${e.id}" ${r===e.id?'selected':''}>${CATEGORY_ICONS[e.category]||''} ${e.name}</option>
+                        `).join('')}
+                      </select>
+                      <button class="btn danger" style="padding:1px 5px;font-size:0.68rem;flex-shrink:0" onclick="removeInteractionReq(${i},${ri})">✕</button>
+                    </div>
                   `).join('')}
-                </select>
+                  ${(ix.requires||[]).length===0?'<div style="font-size:0.72rem;color:var(--text-dim)">None — always available</div>':''}
+                </div>
               </div>
+              <!-- Required states -->
+              ${entity.states?.length>1?`
+              <div>
+                <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);margin-bottom:3px">📍 Active in states:</div>
+                <div class="state-checks">
+                  ${entity.states.map(st=>`
+                    <label class="state-check">
+                      <input type="checkbox" ${(ix.required_states||[]).includes(st.id)?'checked':''}
+                        onchange="toggleRequiredState(${i},'${st.id}',this.checked)">
+                      ${st.label||st.id}
+                    </label>
+                  `).join('')}
+                  <label class="state-check" style="color:var(--text-dim);font-style:italic">
+                    <input type="checkbox" ${!(ix.required_states?.length)?'checked':''}
+                      onchange="if(this.checked)clearRequiredStates(${i})">
+                    All states
+                  </label>
+                </div>
+              </div>
+              `:''}
+              <!-- Sound -->
               <div style="display:flex;align-items:center;gap:6px">
                 <div style="font-size:0.68rem;color:var(--text-dim);font-family:var(--font-mono);white-space:nowrap">🔔 Sound:</div>
                 <input class="field-input" style="flex:1;font-size:0.75rem" placeholder="URL or leave blank" value="${ix.sound||''}" oninput="updateInteraction(${i},'sound',this.value)">
@@ -2121,7 +2163,7 @@ function addInteraction() {
   const entity = world.entities.find(e => e.id === activeEntityId);
   if (!entity) return;
   if (!entity.interactions) entity.interactions = [];
-  entity.interactions.push({ trigger: 'click', action: 'collect', reward: '', requires_entity_id: '' });
+  entity.interactions.push({ trigger:'click', action:'collect', reward:'', requires:[], required_states:[], sound:'' });
   renderEntityForm();
 }
 function removeInteraction(i) {
@@ -2131,6 +2173,56 @@ function removeInteraction(i) {
 function updateInteraction(i, key, val) {
   const entity = world.entities.find(e => e.id === activeEntityId);
   if (entity?.interactions?.[i]) entity.interactions[i][key] = val;
+}
+
+// Multiple requirements per interaction
+function addInteractionReq(ixIdx) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity?.interactions?.[ixIdx]) return;
+  if (!entity.interactions[ixIdx].requires) entity.interactions[ixIdx].requires = [];
+  entity.interactions[ixIdx].requires.push('');
+  renderEntityForm();
+}
+function removeInteractionReq(ixIdx, reqIdx) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity?.interactions?.[ixIdx]?.requires) return;
+  entity.interactions[ixIdx].requires.splice(reqIdx, 1);
+  renderEntityForm();
+}
+function updateInteractionReq(ixIdx, reqIdx, val) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity?.interactions?.[ixIdx]?.requires) return;
+  entity.interactions[ixIdx].requires[reqIdx] = val;
+}
+
+// Required states
+function toggleRequiredState(ixIdx, stateId, checked) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (!entity?.interactions?.[ixIdx]) return;
+  if (!entity.interactions[ixIdx].required_states) entity.interactions[ixIdx].required_states = [];
+  if (checked) {
+    if (!entity.interactions[ixIdx].required_states.includes(stateId))
+      entity.interactions[ixIdx].required_states.push(stateId);
+  } else {
+    entity.interactions[ixIdx].required_states = entity.interactions[ixIdx].required_states.filter(s=>s!==stateId);
+  }
+  // Re-render only the state-checks div to avoid losing focus on other inputs
+  renderEntityForm();
+}
+function clearRequiredStates(ixIdx) {
+  const entity = world.entities.find(e => e.id === activeEntityId);
+  if (entity?.interactions?.[ixIdx]) { entity.interactions[ixIdx].required_states = []; renderEntityForm(); }
+}
+
+// Backward-compat: migrate old single requires_entity_id to array
+function migrateInteractions(entity) {
+  (entity.interactions||[]).forEach(ix => {
+    if (!ix.requires) {
+      ix.requires = ix.requires_entity_id ? [ix.requires_entity_id] : [];
+      delete ix.requires_entity_id;
+    }
+    if (!ix.required_states) ix.required_states = [];
+  });
 }
 
 function saveEntity() {
@@ -2961,12 +3053,12 @@ document.getElementById('mapCanvas').addEventListener('click', function(e) {
 function seedDemoData() {
   if (world.entities.length || world.maps.length) return;
   world.entities = [
-    { id:'entity_1', name:'Rusty Watering Can', category:'tool', rarity:'common', description:'A battered old can. Still holds water.', sprite:'', zone_requirements:[], effect:'speeds_growth', grow_time_hours:0, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'idle',label:'Idle'},{id:'collected',label:'Collected'}], interactions:[{trigger:'click',action:'collect',reward:'water_charge'}] },
-    { id:'entity_2', name:'Wildflower Seed', category:'plant', rarity:'common', description:'Hardy seeds that bloom anywhere.', sprite:'', zone_requirements:[], effect:'restores_soil', grow_time_hours:24, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'seed',label:'Seed'},{id:'sprout',label:'Sprout'},{id:'bloom',label:'Bloom'}], interactions:[{trigger:'water',action:'grow',reward:''}] },
-    { id:'entity_3', name:'Saguaro Seedling', category:'plant', rarity:'uncommon', description:'Slow-growing desert giant. Requires warm zone.', sprite:'', zone_requirements:[9,10,11,12], effect:'restores_soil', grow_time_hours:72, collectible:false, interactable:true, hidden:false, tradeable:true, states:[{id:'seedling',label:'Seedling'},{id:'juvenile',label:'Juvenile'},{id:'mature',label:'Mature'}], interactions:[{trigger:'water',action:'grow',reward:''}] },
-    { id:'entity_4', name:'Old Trowel', category:'tool', rarity:'common', description:'Worn but reliable.', sprite:'', zone_requirements:[], effect:'', grow_time_hours:0, collectible:true, interactable:true, hidden:true, tradeable:true, states:[{id:'idle',label:'Hidden'},{id:'found',label:'Found'}], interactions:[{trigger:'inspect',action:'reveal',reward:'trowel'}] },
-    { id:'entity_5', name:'Broken Greenhouse', category:'building', rarity:'rare', description:'Restore it to shelter cold-zone plants.', sprite:'', zone_requirements:[], effect:'provides_shelter', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'ruined',label:'Ruined'},{id:'restoring',label:'Restoring'},{id:'restored',label:'Restored'}], interactions:[{trigger:'click',action:'restore',reward:'shelter_bonus'}] },
-    { id:'entity_6', name:'Litter Pile', category:'hazard', rarity:'common', description:'Must be cleared before planting.', sprite:'', zone_requirements:[], effect:'blocks_hazard', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'present',label:'Present'},{id:'cleared',label:'Cleared'}], interactions:[{trigger:'click',action:'collect',reward:'5_coins'}] }
+    { id:'entity_1', name:'Rusty Watering Can', category:'tool', rarity:'common', description:'A battered old can. Still holds water.', sprite:'', zone_requirements:[], effect:'speeds_growth', grow_time_hours:0, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'idle',label:'Idle'},{id:'collected',label:'Collected'}], interactions:[{trigger:'click',action:'collect',reward:'water_charge',requires:[],required_states:[]}] },
+    { id:'entity_2', name:'Wildflower Seed', category:'plant', rarity:'common', description:'Hardy seeds that bloom anywhere.', sprite:'', zone_requirements:[], effect:'restores_soil', grow_time_hours:24, collectible:true, interactable:true, hidden:false, tradeable:true, states:[{id:'seed',label:'Seed'},{id:'sprout',label:'Sprout'},{id:'bloom',label:'Bloom'}], interactions:[{trigger:'water',action:'grow',reward:'',requires:[],required_states:[]}] },
+    { id:'entity_3', name:'Saguaro Seedling', category:'plant', rarity:'uncommon', description:'Slow-growing desert giant. Requires warm zone.', sprite:'', zone_requirements:[9,10,11,12], effect:'restores_soil', grow_time_hours:72, collectible:false, interactable:true, hidden:false, tradeable:true, states:[{id:'seedling',label:'Seedling'},{id:'juvenile',label:'Juvenile'},{id:'mature',label:'Mature'}], interactions:[{trigger:'water',action:'grow',reward:'',requires:[],required_states:[]}] },
+    { id:'entity_4', name:'Old Trowel', category:'tool', rarity:'common', description:'Worn but reliable.', sprite:'', zone_requirements:[], effect:'', grow_time_hours:0, collectible:true, interactable:true, hidden:true, tradeable:true, states:[{id:'idle',label:'Hidden'},{id:'found',label:'Found'}], interactions:[{trigger:'inspect',action:'reveal',reward:'trowel',requires:[],required_states:[]}] },
+    { id:'entity_5', name:'Broken Greenhouse', category:'building', rarity:'rare', description:'Restore it to shelter cold-zone plants.', sprite:'', zone_requirements:[], effect:'provides_shelter', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'ruined',label:'Ruined'},{id:'restoring',label:'Restoring'},{id:'restored',label:'Restored'}], interactions:[{trigger:'click',action:'restore',reward:'shelter_bonus',requires:[],required_states:[]}] },
+    { id:'entity_6', name:'Litter Pile', category:'hazard', rarity:'common', description:'Must be cleared before planting.', sprite:'', zone_requirements:[], effect:'blocks_hazard', grow_time_hours:0, collectible:false, interactable:true, hidden:false, tradeable:false, states:[{id:'present',label:'Present'},{id:'cleared',label:'Cleared'}], interactions:[{trigger:'click',action:'collect',reward:'5_coins',requires:[],required_states:[]}] }
   ];
   world.maps = [
     { id:'map_1', name:'Abandoned Corner Lot', type:'top-down', zone:6, blight_level:80, description:'A neglected urban lot, thick with litter and cracked concrete.', background:null, portals:[{id:'portal_1',to:'map_2',label:'Shed Door',requires_level:0,x:0.85,y:0.6}], objects:[
