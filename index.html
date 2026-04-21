@@ -814,11 +814,16 @@ function openActionPopup(obj, entity, interactions) {
   html += `<div class="popup-state">${stLabel}${stProg}${remain>0?' · ⏱ '+formatDur(remain):(stIdx>0&&!isLast?' · ✓ Ready':'')}</div>`;
   html += `<div class="popup-sep"></div>`;
 
-  // Filter by state
+  // Filter by state — built-in trigger rules + explicit required_states list
   const valid = interactions.filter(ix => {
-    if (ix.trigger==='harvest' || ix.action==='harvest') return isLast;
-    if (ix.trigger==='water'   || ix.action==='grow')    return !isLast;
-    if (ix.trigger==='plant')                            return isFirst;
+    // If the interaction declares required_states, the current state must be in that list
+    if (ix.required_states?.length && !ix.required_states.includes(curState)) return false;
+    // Built-in trigger/action state rules (apply when no explicit required_states set)
+    if (!ix.required_states?.length) {
+      if (ix.trigger==='harvest' || ix.action==='harvest') return isLast;
+      if (ix.trigger==='water'   || ix.action==='grow')    return !isLast;
+      if (ix.trigger==='plant')                            return isFirst;
+    }
     return true;
   });
 
@@ -829,15 +834,17 @@ function openActionPopup(obj, entity, interactions) {
   const ICONS = {click:'👆',collect:'🤲',water:'💧',harvest:'🌾',inspect:'🔍',plant:'🌱'};
   valid.forEach(ix => {
     const ri     = interactions.indexOf(ix);
-    const needId = ix.requires_entity_id;
-    const locked = needId && !hasItem(needId);
-    const req    = locked ? world.entities?.find(e=>e.id===needId) : null;
+    // Multi-requirement check (backward compat with old single requires_entity_id)
+    const reqs   = ix.requires?.length ? ix.requires : (ix.requires_entity_id ? [ix.requires_entity_id] : []);
+    const unmet  = reqs.filter(rid => rid && !hasItem(rid));
+    const locked = unmet.length > 0;
+    const reqNames = unmet.map(rid => world.entities?.find(e=>e.id===rid)?.name||rid).filter(Boolean);
     const icon   = ICONS[ix.trigger]||'▶';
     const lbl    = ix.trigger.charAt(0).toUpperCase()+ix.trigger.slice(1);
-    html += `<button class="action-btn${locked?' locked':''}" ${locked?`title="Needs: ${req?.name||needId}"`:''}
+    html += `<button class="action-btn${locked?' locked':''}" ${locked?`title="Needs: ${reqNames.join(', ')}"`:''} 
       onclick="${locked?'':'fireInteraction(\''+obj.id+'\',\''+ix.trigger+'\','+ri+')'}">
       <span class="action-icon">${icon}</span>${lbl}
-      ${locked?`<span class="action-lock">🔒 ${req?.name||''}</span>`:''}
+      ${locked?`<span class="action-lock">🔒 ${reqNames.join(', ')}</span>`:''}
     </button>`;
   });
 
@@ -875,8 +882,12 @@ function fireInteraction(objId, trigger, ixIdx) {
   if (!obj||!entity) return;
   const ix = entity.interactions[ixIdx]; if (!ix) return;
 
-  if (ix.requires_entity_id && !hasItem(ix.requires_entity_id)) {
-    showToast(`Need ${world.entities?.find(e=>e.id===ix.requires_entity_id)?.name||'required item'}`,'error'); return;
+  // Check all required items (supports both old single-id and new array schema)
+  const reqs = ix.requires?.length ? ix.requires : (ix.requires_entity_id ? [ix.requires_entity_id] : []);
+  const unmetReq = reqs.find(rid => rid && !hasItem(rid));
+  if (unmetReq) {
+    const name = world.entities?.find(e=>e.id===unmetReq)?.name || 'required item';
+    showToast(`Need ${name}`,'error'); return;
   }
   if (ix.sound) try { new Audio(ix.sound).play(); } catch {}
 
