@@ -1,1438 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Verdure</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
-
-/* ── TOKENS ─────────────────────────────────────────── */
-:root {
-  --soil:   #2a1f14; --bark:   #3d2b1a; --moss:  #4a5e3a;
-  --leaf:   #6b8f4e; --sprout: #9bbf73; --bloom: #c8e6a0;
-  --petal:  #e8f5d0; --rust:   #b05c2a; --amber: #d4892a;
-  --fog:    #c2c9b8; --panel:  rgba(26,20,12,0.95);
-  --border: rgba(80,65,40,0.6); --text: #d8cdb8;
-  --dim:    #7a7060; --bright: #eee8d8;
-  --font-d: 'Playfair Display', Georgia, serif;
-  --font-b: 'DM Sans', sans-serif;
-  --font-m: 'DM Mono', monospace;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-
-/* ── BASE ───────────────────────────────────────────── */
-body {
-  background: #1a140c; font-family: var(--font-b);
-  color: var(--text); height: 100vh; overflow: hidden;
-  display: flex; flex-direction: column; user-select: none;
-}
-
-/* ── FIXED SCREENS (load / pick / setup / settings) ─── */
-.fixed-screen {
-  position: fixed; inset: 0; z-index: 9000;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 18px;
-  background: var(--soil);
-}
-.fixed-screen h1 { font-family: var(--font-d); font-size: 2.6rem; color: var(--sprout); letter-spacing: .06em; }
-.fixed-screen h2 { font-family: var(--font-d); font-size: 1.8rem; color: var(--sprout); }
-.fixed-screen p  { font-size: .88rem; color: var(--dim); text-align: center; max-width: 340px; line-height: 1.65; }
-.fixed-screen code { font-family: var(--font-m); font-size: .8em; background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 3px; }
-.load-bar-wrap { width: 200px; height: 4px; background: var(--bark); border-radius: 2px; overflow: hidden; }
-.load-bar { height: 100%; background: var(--leaf); border-radius: 2px; transition: width .3s; width: 0%; }
-.load-msg  { font-family: var(--font-m); font-size: .72rem; color: var(--dim); }
-.pick-btn {
-  background: var(--moss); border: none; color: var(--petal);
-  font-family: var(--font-m); font-size: .8rem; letter-spacing: .08em;
-  padding: 10px 28px; border-radius: 4px; cursor: pointer; transition: background .15s;
-}
-.pick-btn:hover { background: var(--leaf); }
-.setup-input {
-  background: rgba(255,255,255,.06); border: 1px solid var(--border);
-  color: var(--bright); font-family: var(--font-d); font-size: 1.1rem;
-  padding: 10px 20px; border-radius: 4px; text-align: center;
-  width: 260px; outline: none;
-}
-.setup-input:focus { border-color: var(--leaf); }
-
-/* Settings panel */
-#settingsPanel {
-  position: fixed; inset: 0; z-index: 8000;
-  background: rgba(10,8,5,.88);
-  display: none; align-items: center; justify-content: center;
-}
-#settingsPanel.open { display: flex; }
-.settings-box {
-  background: var(--soil); border: 1px solid var(--border);
-  border-radius: 8px; padding: 28px 32px; width: 340px;
-  display: flex; flex-direction: column; gap: 16px;
-}
-.settings-box h3 { font-family: var(--font-d); font-size: 1.3rem; color: var(--sprout); }
-.settings-row { display: flex; flex-direction: column; gap: 5px; }
-.settings-label { font-family: var(--font-m); font-size: .68rem; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; }
-.settings-input {
-  background: rgba(255,255,255,.06); border: 1px solid var(--border);
-  color: var(--bright); font-family: var(--font-b); font-size: .88rem;
-  padding: 7px 12px; border-radius: 4px; outline: none; width: 100%;
-}
-.settings-input:focus { border-color: var(--leaf); }
-input[type=range].settings-input { padding: 4px 0; }
-.settings-btn-row { display: flex; gap: 8px; }
-.settings-btn {
-  flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border);
-  background: rgba(255,255,255,.05); color: var(--text);
-  font-family: var(--font-m); font-size: .72rem; cursor: pointer;
-  transition: all .12s; letter-spacing: .06em;
-}
-.settings-btn:hover        { background: rgba(107,143,78,.2); border-color: var(--leaf); color: var(--bright); }
-.settings-btn.primary      { background: var(--moss); border-color: var(--leaf); color: var(--petal); }
-.settings-btn.primary:hover{ background: var(--leaf); }
-.settings-btn.danger       { border-color: var(--rust); color: var(--rust); }
-.settings-btn.danger:hover { background: var(--rust); color: var(--petal); }
-
-/* ── GAME LAYOUT ────────────────────────────────────── */
-#gameWrap {
-  display: none; flex: 1; flex-direction: column;
-  overflow: hidden; background: #0e0b08; min-height: 0;
-}
-
-/* stageOuter fills available space and centres the 16:9 content area */
-#stageOuter {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  overflow: hidden; background: #0e0b08; min-height: 0;
-}
-
-/* mapStage is sized by resizeStage() to match contentArea exactly */
-#mapStage { position: relative; overflow: visible; cursor: default; flex-shrink: 0; }
-
-/* contentArea is the strict 16:9 coordinate space.
-   ALL objects use left/top % of THIS element — same as the editor canvas. */
-#contentArea {
-  position: relative; overflow: hidden; background: #1a1410;
-  width: 100%; height: 100%;
-}
-#mapBg {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: fill; /* fills exactly — no letterbox inside 16:9 area */
-  display: block; pointer-events: none;
-}
-#mapBgPlaceholder {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: repeating-linear-gradient(45deg,#2a2018 0,#2a2018 10px,#201810 10px,#201810 20px);
-  font-size: 4rem; color: rgba(255,255,255,.06); pointer-events: none;
-}
-#maskOverlay    { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-#objectLayer    { position: absolute; inset: 0; z-index: 10; }
-#transitionOverlay {
-  position: absolute; inset: 0; background: #1a140c;
-  opacity: 0; pointer-events: none; z-index: 50; transition: opacity .35s;
-}
-#transitionOverlay.fade-in { opacity: 1; pointer-events: all; }
-#mapBanner {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
-  background: var(--panel); border: 1px solid var(--border);
-  padding: 6px 20px; border-radius: 20px;
-  font-family: var(--font-d); font-size: 1rem; color: var(--bright);
-  z-index: 30; opacity: 0; pointer-events: none; transition: opacity .4s;
-}
-#mapBanner.show { opacity: 1; }
-
-/* Plant mode */
-#plantModeBar {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  background: rgba(74,94,58,.95); border: 1px solid var(--leaf);
-  border-radius: 20px; padding: 6px 18px;
-  font-family: var(--font-m); font-size: .72rem; color: var(--bloom);
-  z-index: 40; display: none; align-items: center; gap: 10px;
-}
-#plantModeBar.active { display: flex; }
-#contentArea.plant-mode { cursor: crosshair; }
-
-/* Minimap */
-#minimap {
-  position: absolute; bottom: 12px; right: 12px; width: 160px;
-  z-index: 30; background: var(--panel); border: 1px solid var(--border);
-  border-radius: 6px; overflow: hidden; display: none;
-}
-#minimap.open { display: block; }
-.minimap-header {
-  padding: 5px 10px; font-family: var(--font-m); font-size: .62rem;
-  color: var(--dim); border-bottom: 1px solid var(--border);
-  letter-spacing: .08em; text-transform: uppercase;
-}
-.minimap-maps { padding: 6px; display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
-.minimap-item {
-  padding: 5px 8px; border-radius: 3px; font-size: .75rem; cursor: pointer;
-  border: 1px solid transparent; transition: all .12s; color: var(--text);
-  display: flex; align-items: center; gap: 6px;
-}
-.minimap-item:hover            { background: rgba(107,143,78,.15); border-color: var(--border); }
-.minimap-item.current          { background: rgba(107,143,78,.2);  border-color: var(--leaf); color: var(--bright); }
-.minimap-item.unvisited        { color: var(--dim); }
-
-/* ── OBJECTS ─────────────────────────────────────────── */
-/* Outer: position + translate(-50%,-50%) + optional rotation — never animated */
-.game-object {
-  position: absolute; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-}
-.game-object:hover { filter: brightness(1.15); }
-/* Inner: animation only, never a translate — so rotation and animation never conflict */
-.obj-inner {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-}
-.obj-inner.anim-sway   { animation: vd-sway   3s ease-in-out infinite; }
-.obj-inner.anim-jitter { animation: vd-jitter  .3s linear infinite; }
-.obj-inner.anim-pop    { animation: vd-pop    1.8s ease-in-out infinite; }
-.obj-inner.anim-float  { animation: vd-float  2.5s ease-in-out infinite; }
-.obj-inner.anim-glow   { animation: vd-glow     2s ease-in-out infinite; }
-@keyframes vd-sway   { 0%,100%{transform:rotate(-4deg)}  50%{transform:rotate(4deg)} }
-@keyframes vd-jitter { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 50%{transform:translate(2px,-1px)} 75%{transform:translate(-1px,2px)} }
-@keyframes vd-pop    { 0%,100%{transform:scale(1)}        50%{transform:scale(1.12)} }
-@keyframes vd-float  { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-6px)} }
-@keyframes vd-glow   { 0%,100%{opacity:1;filter:brightness(1)} 50%{opacity:.65;filter:brightness(1.7)} }
-@keyframes vd-reveal { 0%{filter:brightness(3) saturate(0);transform:scale(1.4)} 100%{filter:brightness(1) saturate(1);transform:scale(1)} }
-.game-object.just-revealed .obj-inner { animation: vd-reveal .6s ease-out; }
-
-.obj-visual { display: flex; align-items: center; justify-content: center; }
-.obj-icon {
-  background: rgba(26,20,12,.7); border: 2px solid rgba(80,65,40,.5);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,.6);
-}
-.obj-sprite { object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
-.obj-label {
-  font-size: .6rem; font-family: var(--font-m);
-  background: rgba(0,0,0,.75); color: var(--bloom);
-  padding: 1px 6px; border-radius: 3px; white-space: nowrap;
-  pointer-events: none; opacity: 0; transition: opacity .15s;
-}
-.game-object:hover .obj-label { opacity: 1; }
-.obj-badge {
-  position: absolute; top: -6px; right: -6px;
-  background: var(--amber); color: #1a140c;
-  font-family: var(--font-m); font-size: .5rem;
-  padding: 1px 4px; border-radius: 8px; pointer-events: none; z-index: 2;
-  white-space: nowrap;
-}
-.obj-dot {
-  position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--sprout); border: 1px solid var(--soil); pointer-events: none;
-}
-
-/* ── HUD ─────────────────────────────────────────────── */
-#hud {
-  flex-shrink: 0; background: var(--panel); border-top: 1px solid var(--border);
-  display: flex; align-items: stretch; height: 86px; position: relative; z-index: 20;
-}
-.hud-section { padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px; border-right: 1px solid var(--border); }
-.hud-section:last-child { border-right: none; }
-.hud-label { font-family: var(--font-m); font-size: .6rem; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; }
-.hud-name  { font-family: var(--font-d); font-size: 1rem; color: var(--bright); }
-.hud-sub   { font-family: var(--font-m); font-size: .65rem; color: var(--dim); }
-.bar-wrap  { height: 3px; background: var(--bark); border-radius: 2px; overflow: hidden; margin-top: 2px; }
-.bar-fill  { height: 100%; border-radius: 2px; transition: width .3s; }
-#xpBar     { background: var(--leaf); }
-#blightBar { background: var(--rust); }
-/* XP bar container */
-#xpBarWrap { width: 110px; }
-/* Energy */
-.energy-pips { display: flex; gap: 3px; flex-wrap: wrap; max-width: 84px; }
-.pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--border); transition: background .3s; }
-.pip.on  { background: var(--sprout); border-color: var(--leaf); }
-.pip.off { background: transparent; }
-/* Inventory */
-.hud-inventory {
-  flex: 1; padding: 8px 10px; display: flex; align-items: center; gap: 8px;
-  overflow-x: auto; min-width: 0; border-right: 1px solid var(--border);
-}
-.hud-inventory::-webkit-scrollbar { height: 3px; }
-.hud-inventory::-webkit-scrollbar-thumb { background: var(--border); }
-.inv-slot {
-  width: 52px; height: 64px; flex-shrink: 0;
-  background: rgba(255,255,255,.04); border: 1px solid var(--border);
-  border-radius: 4px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
-  position: relative; cursor: pointer; transition: border-color .15s, background .15s;
-}
-.inv-slot:hover  { border-color: var(--leaf); background: rgba(107,143,78,.12); }
-.inv-slot.active { border-color: var(--sprout); background: rgba(107,143,78,.2); }
-.inv-icon  { font-size: 1.4rem; line-height: 1; }
-.inv-img   { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
-.inv-name  { font-size: .5rem; font-family: var(--font-m); color: var(--dim); text-align: center; line-height: 1.2; max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.inv-qty   { position: absolute; bottom: 2px; right: 4px; font-family: var(--font-m); font-size: .55rem; color: var(--amber); }
-.inv-empty { font-family: var(--font-m); font-size: .72rem; color: var(--dim); padding: 0 8px; }
-/* Map info */
-.hud-mapname { font-family: var(--font-d); font-size: .9rem; color: var(--bright); }
-.hud-mapmeta { font-family: var(--font-m); font-size: .62rem; color: var(--dim); }
-#blightWrap  { width: 100px; }
-/* HUD buttons */
-.hud-actions { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; justify-content: center; }
-.hud-btn {
-  background: rgba(255,255,255,.05); border: 1px solid var(--border);
-  color: var(--text); font-family: var(--font-m); font-size: .68rem;
-  padding: 5px 10px; border-radius: 3px; cursor: pointer;
-  transition: all .12s; white-space: nowrap; letter-spacing: .04em;
-}
-.hud-btn:hover { background: rgba(107,143,78,.15); border-color: var(--leaf); color: var(--bright); }
-
-/* ── OVERLAYS ────────────────────────────────────────── */
-/* Action popup — centred fixed overlay */
-#actionOverlay {
-  display: none; position: fixed; inset: 0; z-index: 5000;
-  background: rgba(0,0,0,.45); align-items: center; justify-content: center;
-}
-#actionOverlay.open { display: flex; }
-#actionPopup {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; padding: 6px; min-width: 230px; max-width: 320px;
-  max-height: 80vh; overflow-y: auto;
-  box-shadow: 0 16px 48px rgba(0,0,0,.8);
-  display: flex; flex-direction: column; gap: 3px;
-  animation: popup-in .18s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes popup-in { from{opacity:0;transform:scale(.92) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
-.popup-title {
-  font-family: var(--font-m); font-size: .62rem; color: var(--dim);
-  padding: 2px 12px 4px; letter-spacing: .1em; text-transform: uppercase;
-}
-.popup-desc  { font-size: .78rem; color: var(--dim); padding: 0 12px 4px; font-style: italic; }
-.popup-state { font-family: var(--font-m); font-size: .62rem; color: var(--leaf); padding: 2px 12px; }
-.popup-sep   { height: 1px; background: var(--border); margin: 2px 0; }
-.action-btn {
-  background: none; border: none; color: var(--text); font-family: var(--font-b);
-  font-size: .82rem; padding: 7px 12px; border-radius: 4px; cursor: pointer;
-  transition: background .1s; display: flex; align-items: center; gap: 8px; text-align: left;
-}
-.action-btn:hover     { background: rgba(107,143,78,.2); color: var(--bright); }
-.action-btn.locked    { color: var(--dim); cursor: not-allowed; }
-.action-btn.locked:hover { background: none; color: var(--dim); }
-.action-icon { font-size: 1rem; flex-shrink: 0; }
-.action-lock { font-size: .65rem; color: var(--rust); margin-left: auto; }
-
-/* Dialog — fixed bottom-sheet */
-#dialogOverlay {
-  display: none; position: fixed; inset: 0; z-index: 4000;
-  background: rgba(0,0,0,.5); align-items: flex-end; justify-content: center;
-}
-#dialogOverlay.open { display: flex; }
-#dialogBox {
-  width: 100%; max-width: 680px;
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px 10px 0 0; padding: 20px 24px 28px;
-  display: flex; flex-direction: column; gap: 12px;
-  animation: slide-up .22s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes slide-up { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
-.dlg-speaker { font-family: var(--font-m); font-size: .7rem; color: var(--sprout); letter-spacing: .1em; text-transform: uppercase; }
-.dlg-text    { font-size: .95rem; line-height: 1.6; color: var(--bright); font-family: var(--font-d); font-style: italic; }
-.dlg-choices { display: flex; flex-direction: column; gap: 6px; }
-.dlg-choice  {
-  background: rgba(255,255,255,.05); border: 1px solid var(--border);
-  border-radius: 4px; padding: 8px 14px; font-size: .85rem; color: var(--text);
-  cursor: pointer; transition: all .12s; text-align: left; display: flex; justify-content: space-between; align-items: center;
-}
-.dlg-choice:hover { background: rgba(107,143,78,.18); border-color: var(--leaf); color: var(--bright); }
-.dlg-reward { font-family: var(--font-m); font-size: .68rem; color: var(--amber); }
-
-/* Toast */
-#toast {
-  position: fixed; bottom: 100px; left: 50%;
-  transform: translateX(-50%) translateY(40px);
-  background: var(--moss); color: var(--petal);
-  padding: 7px 20px; border-radius: 20px;
-  font-family: var(--font-m); font-size: .75rem;
-  z-index: 6000; pointer-events: none;
-  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s; opacity: 0;
-}
-#toast.show  { transform: translateX(-50%) translateY(0); opacity: 1; }
-#toast.xp    { background: var(--amber); }
-#toast.error { background: var(--rust); }
-
-/* Particles */
-.particle {
-  position: fixed; pointer-events: none; z-index: 7000;
-  font-size: 1.1rem; animation: part-float 1.2s ease-out forwards;
-}
-.xp-particle {
-  position: fixed; pointer-events: none; z-index: 7000;
-  font-family: var(--font-m); font-size: .75rem; font-weight: 500;
-  color: var(--amber); background: rgba(26,20,12,.8);
-  padding: 2px 8px; border-radius: 10px;
-  animation: part-float 1.4s ease-out forwards;
-}
-@keyframes part-float { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(.5)} }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Verdure</title>
+  <link rel="stylesheet" href="game.css">
 </head>
+
 <body>
+  >
 
-<!-- ── LOADING SCREEN ───────────────────────────────── -->
-<div class="fixed-screen" id="loadScreen">
-  <h1>🌿 Verdure</h1>
-  <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
-  <p class="load-msg" id="loadMsg">Loading…</p>
-</div>
+  <!-- ── LOADING SCREEN ───────────────────────────────── -->
+  <div class="fixed-screen" id="loadScreen">
+    <h1>🌿 Verdure</h1>
+    <div class="load-bar-wrap">
+      <div class="load-bar" id="loadBar"></div>
+    </div>
+    <p class="load-msg" id="loadMsg">Loading…</p>
+  </div>
 
-<!-- ── WORLD FILE PICKER ─────────────────────────────── -->
-<div class="fixed-screen" id="worldPickWrap" style="display:none">
-  <h1>🌿 Verdure</h1>
-  <p>Load a <code>world.json</code> exported from the World Editor.</p>
-  <button class="pick-btn" onclick="document.getElementById('worldFileInput').click()">📂 Open world.json</button>
-  <input type="file" id="worldFileInput" accept=".json" style="display:none" onchange="loadWorldFile(event)">
-  <p style="font-size:.72rem;margin-top:-4px">Or serve this folder via http and place world.json in <code>../data/world.json</code></p>
-</div>
+  <!-- ── WORLD FILE PICKER ─────────────────────────────── -->
+  <div class="fixed-screen" id="worldPickWrap" style="display:none">
+    <h1>🌿 Verdure</h1>
+    <p>Load a <code>world.json</code> exported from the World Editor.</p>
+    <button class="pick-btn" onclick="document.getElementById('worldFileInput').click()">📂 Open world.json</button>
+    <input type="file" id="worldFileInput" accept=".json" style="display:none" onchange="loadWorldFile(event)">
+    <p style="font-size:.72rem;margin-top:-4px">Or serve this folder via http and place world.json in
+      <code>../data/world.json</code>
+    </p>
+  </div>
 
-<!-- ── PLAYER SETUP ──────────────────────────────────── -->
-<div class="fixed-screen" id="playerSetupWrap" style="display:none">
-  <h2>🌿 Welcome to Verdure</h2>
-  <p>What shall we call you?</p>
-  <input class="setup-input" id="playerNameInput" placeholder="Your name…" maxlength="24"
-    onkeydown="if(event.key==='Enter')confirmPlayerSetup()">
-  <button class="pick-btn" onclick="confirmPlayerSetup()">Begin →</button>
-</div>
+  <!-- ── PLAYER SETUP ──────────────────────────────────── -->
+  <div class="fixed-screen" id="playerSetupWrap" style="display:none">
+    <h2>🌿 Welcome to Verdure</h2>
+    <p>What shall we call you?</p>
+    <input class="setup-input" id="playerNameInput" placeholder="Your name…" maxlength="24"
+      onkeydown="if(event.key==='Enter')confirmPlayerSetup()">
+    <button class="pick-btn" onclick="confirmPlayerSetup()">Begin →</button>
+  </div>
 
-<!-- ── SETTINGS ──────────────────────────────────────── -->
-<div id="settingsPanel">
-  <div class="settings-box">
-    <h3>⚙ Settings</h3>
-    <div class="settings-row">
-      <div class="settings-label">Player Name</div>
-      <input class="settings-input" id="settingsName">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label">Master Volume</div>
-      <input type="range" class="settings-input" id="settingsVolume" min="0" max="1" step="0.05">
-    </div>
-    <div class="settings-row">
-      <div class="settings-label">Object Labels</div>
-      <button class="settings-btn" id="labelsBtn" onclick="toggleLabels()">Labels: On</button>
-    </div>
-    <div class="settings-btn-row">
-      <button class="settings-btn primary" onclick="saveSettings()">Save</button>
-      <button class="settings-btn" onclick="closeSettings()">Cancel</button>
-    </div>
-    <div class="settings-btn-row">
-      <button class="settings-btn danger" onclick="resetProgress()">Reset Progress</button>
+  <!-- ── SETTINGS ──────────────────────────────────────── -->
+  <div id="settingsPanel">
+    <div class="settings-box">
+      <h3>⚙ Settings</h3>
+      <div class="settings-row">
+        <div class="settings-label">Player Name</div>
+        <input class="settings-input" id="settingsName">
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Master Volume</div>
+        <input type="range" class="settings-input" id="settingsVolume" min="0" max="1" step="0.05">
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Object Labels</div>
+        <button class="settings-btn" id="labelsBtn" onclick="toggleLabels()">Labels: On</button>
+      </div>
+      <div class="settings-btn-row">
+        <button class="settings-btn primary" onclick="saveSettings()">Save</button>
+        <button class="settings-btn" onclick="closeSettings()">Cancel</button>
+      </div>
+      <div class="settings-btn-row">
+        <button class="settings-btn danger" onclick="resetProgress()">Reset Progress</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ── MAIN GAME ──────────────────────────────────────── -->
-<div id="gameWrap">
+  <!-- ── MAIN GAME ──────────────────────────────────────── -->
+  <div id="gameWrap">
 
-  <!-- Stage: stageOuter centres the 16:9 contentArea -->
-  <div id="stageOuter">
-    <div id="mapStage">
-      <div id="contentArea">
-        <img id="mapBg" src="" style="display:none">
-        <div id="mapBgPlaceholder">🌿</div>
-        <svg id="maskOverlay"></svg>
-        <div id="objectLayer"></div>
-        <div id="transitionOverlay"></div>
-        <div id="plantModeBar">
-          🌱 Plant mode — click map to place
-          <button onclick="cancelPlantMode()" style="background:none;border:none;color:var(--rust);cursor:pointer;font-family:var(--font-m);font-size:.72rem;margin-left:8px">✕</button>
+    <!-- Stage: stageOuter centres the 16:9 contentArea -->
+    <div id="stageOuter">
+      <div id="mapStage">
+        <div id="contentArea">
+          <img id="mapBg" src="" style="display:none">
+          <div id="mapBgPlaceholder">🌿</div>
+          <svg id="maskOverlay"></svg>
+          <div id="objectLayer"></div>
+          <div id="transitionOverlay"></div>
+          <div id="plantModeBar">
+            🌱 Plant mode — click map to place
+            <button onclick="cancelPlantMode()"
+              style="background:none;border:none;color:var(--rust);cursor:pointer;font-family:var(--font-m);font-size:.72rem;margin-left:8px">✕</button>
+          </div>
+          <div id="minimap">
+            <div class="minimap-header">Maps</div>
+            <div class="minimap-maps" id="minimapList"></div>
+          </div>
         </div>
-        <div id="minimap">
-          <div class="minimap-header">Maps</div>
-          <div class="minimap-maps" id="minimapList"></div>
+        <div id="mapBanner"></div>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-section" style="min-width:140px">
+        <div class="hud-name" id="hudName">Gardener</div>
+        <div class="hud-sub" id="hudLevel">LVL 1 · 0 XP</div>
+        <div class="hud-sub hud-currency" id="hudCurrency">0 🪙 · 0 ♦ · 0 🔷</div>
+        <div class="bar-wrap" id="xpBarWrap">
+          <div class="bar-fill" id="xpBar" style="width:0%"></div>
         </div>
       </div>
-      <div id="mapBanner"></div>
+      <div class="hud-section" style="min-width:90px">
+        <div class="hud-label">Energy</div>
+        <div class="energy-pips" id="energyPips"></div>
+        <div class="hud-sub" id="energyCount"></div>
+      </div>
+      <div class="hud-inventory" id="invSlots"></div>
+      <div class="hud-section" style="min-width:140px;margin-left:auto;text-align:right">
+        <div class="hud-mapname" id="hudMap">—</div>
+        <div class="hud-mapmeta" id="hudMapMeta">—</div>
+        <div class="bar-wrap" id="blightWrap">
+          <div class="bar-fill" id="blightBar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="hud-actions">
+        <button class="hud-btn" onclick="toggleMinimap()">🗺 Maps</button>
+        <button class="hud-btn" onclick="openMarketplace()">📱 Market</button>
+        <button class="hud-btn" onclick="openSettings()">⚙ Settings</button>
+      </div>
+    </div>
+
+  </div><!-- /gameWrap -->
+
+  <!-- ── FIXED OVERLAYS (outside gameWrap — never clip) ── -->
+  <div id="actionOverlay" onclick="if(event.target===this)closeActionPopup()">
+    <div id="actionPopup"></div>
+  </div>
+
+  <div id="dialogOverlay">
+    <div id="dialogBox"></div>
+  </div>
+
+  <div id="marketOverlay" onclick="if(event.target===this) closeMarketplace()">
+    <div class="market-panel">
+      <div class="market-header">
+        <div>📱 Market & Services</div>
+        <button class="market-close" onclick="closeMarketplace()">✕</button>
+      </div>
+      <div class="market-body">
+        <div class="market-section">
+          <div class="market-title">Marketplace</div>
+          <div class="market-desc">Spend coins and gems on seeds, tools, and upgrades from local vendors.</div>
+          <div class="market-grid">
+            <div class="market-card">
+              <div class="market-icon">🛒</div><strong>Seed Shop</strong>
+              <p>Buy seed packs and planting kits.</p>
+            </div>
+            <div class="market-card">
+              <div class="market-icon">🧰</div><strong>Tool Stand</strong>
+              <p>Purchase trowels, gloves, and repair supplies.</p>
+            </div>
+            <div class="market-card">
+              <div class="market-icon">💎</div><strong>Gem Exchange</strong>
+              <p>Trade rubies and sapphires for rare items or services.</p>
+            </div>
+          </div>
+        </div>
+        <div class="market-section">
+          <div class="market-title">Services</div>
+          <div class="market-desc">Book local helpers and unlock premium support for your garden.</div>
+          <div class="market-grid">
+            <div class="market-card">
+              <div class="market-icon">🌿</div><strong>Cleanup Crew</strong>
+              <p>Clear hazards faster with coin rewards.</p>
+            </div>
+            <div class="market-card">
+              <div class="market-icon">🪴</div><strong>Nursery Care</strong>
+              <p>Boost plant growth and earn extra XP.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- HUD -->
-  <div id="hud">
-    <div class="hud-section" style="min-width:130px">
-      <div class="hud-name"  id="hudName">Gardener</div>
-      <div class="hud-sub"   id="hudLevel">LVL 1 · 0 XP</div>
-      <div class="bar-wrap" id="xpBarWrap"><div class="bar-fill" id="xpBar" style="width:0%"></div></div>
-    </div>
-    <div class="hud-section" style="min-width:90px">
-      <div class="hud-label">Energy</div>
-      <div class="energy-pips" id="energyPips"></div>
-      <div class="hud-sub" id="energyCount"></div>
-    </div>
-    <div class="hud-inventory" id="invSlots"></div>
-    <div class="hud-section" style="min-width:140px;margin-left:auto;text-align:right">
-      <div class="hud-mapname" id="hudMap">—</div>
-      <div class="hud-mapmeta" id="hudMapMeta">—</div>
-      <div class="bar-wrap" id="blightWrap"><div class="bar-fill" id="blightBar" style="width:0%"></div></div>
-    </div>
-    <div class="hud-actions">
-      <button class="hud-btn" onclick="toggleMinimap()">🗺 Maps</button>
-      <button class="hud-btn" onclick="openSettings()">⚙ Settings</button>
-    </div>
-  </div>
-
-</div><!-- /gameWrap -->
-
-<!-- ── FIXED OVERLAYS (outside gameWrap — never clip) ── -->
-<div id="actionOverlay" onclick="if(event.target===this)closeActionPopup()">
-  <div id="actionPopup"></div>
-</div>
-
-<div id="dialogOverlay">
-  <div id="dialogBox"></div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-'use strict';
-// ═══════════════════════════════════════════════════════════════
-// CONSTANTS
-// ═══════════════════════════════════════════════════════════════
-const XP_PER_LEVEL   = 100;
-const MAX_ENERGY     = 20;
-const ENERGY_REGEN_MS = 3 * 60 * 1000; // 1 pip per 3 min
-const ENERGY_COST    = { collect:1, clear_hazard:1, water:1, inspect:1, plant:2, harvest:2 };
-const XP_REWARD      = { collect:10, clear_hazard:12, grow:5, harvest:15, dialog:8, plant:10, reveal:15 };
-const CAT_ICON       = { tool:'🛠', plant:'🌿', building:'🏚', creature:'🐝', hidden_object:'🔍', portal:'🚪', decoration:'🪨', hazard:'⚠' };
-const MASK_COLOR     = { no_plant:'rgba(220,60,60,.22)', no_walk:'rgba(60,60,220,.22)', interact_only:'rgba(220,160,40,.22)', plant_only:'rgba(60,160,60,.22)', water:'rgba(40,160,220,.22)' };
-const ANIM_CLASSES   = new Set(['sway','jitter','pop','float','glow']);
-
-// ═══════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════
-let world         = null;   // loaded world.json
-let player        = null;   // player object (persisted to localStorage)
-let currentMapId  = null;
-let showLabels    = true;
-let showMasks     = false;
-let masterVolume  = 0.7;
-let ambientAudio  = null;
-let plantModeId   = null;   // entity id currently in plant mode, or null
-let growInterval  = null;
-let toastTimer    = null;
-
-// ═══════════════════════════════════════════════════════════════
-// PLAYER PERSISTENCE
-// ═══════════════════════════════════════════════════════════════
-function defaultPlayer() {
-  return {
-    name: '', hasSetup: false,
-    level: 1, xp: 0,
-    energy: MAX_ENERGY, last_regen: Date.now(),
-    inventory: [],      // [{entity_id, quantity}]
-    map_states: {},     // {map_id: {obj_id: {state, collected, planted_at, respawn_at, revealed}}}
-    visited_maps: [],
-    active_map: null
-  };
-}
-
-function savePlayer() { localStorage.setItem('verdure_player', JSON.stringify(player)); }
-function loadPlayer() {
-  try {
-    const s = localStorage.getItem('verdure_player');
-    player = s ? { ...defaultPlayer(), ...JSON.parse(s) } : defaultPlayer();
-  } catch { player = defaultPlayer(); }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// BOOTSTRAP
-// ═══════════════════════════════════════════════════════════════
-async function init() {
-  setLoad(10, 'Loading player…');
-  loadPlayer();
-  setLoad(30, 'Loading world…');
-
-  // file:// blocks fetch — go straight to picker
-  if (location.protocol === 'file:') {
-    showPicker(); return;
-  }
-  for (const p of ['../data/world.json','world.json','data/world.json']) {
-    try {
-      const r = await fetch(p);
-      if (r.ok) { world = await r.json(); setLoad(80,'Building world…'); startGame(); return; }
-    } catch {}
-  }
-  showPicker();
-}
-
-function showPicker() {
-  setLoad(100,'Ready');
-  setTimeout(() => {
-    hide('loadScreen'); show('worldPickWrap');
-  }, 300);
-}
-
-function setLoad(pct, msg) {
-  document.getElementById('loadBar').style.width = pct + '%';
-  document.getElementById('loadMsg').textContent = msg;
-}
-
-function loadWorldFile(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const fr = new FileReader();
-  fr.onload = ev => {
-    try {
-      world = JSON.parse(ev.target.result);
-      hide('worldPickWrap'); show('loadScreen');
-      setLoad(80,'Building world…'); startGame();
-    } catch(err) { alert('Invalid world.json: ' + err.message); }
-  };
-  fr.readAsText(file);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// GAME START
-// ═══════════════════════════════════════════════════════════════
-function startGame() {
-  if (!world?.maps?.length) { alert('No maps in world.json'); return; }
-  if (!player.hasSetup) { showSetup(); return; }
-  setLoad(95,'Entering world…');
-  setTimeout(() => {
-    hide('loadScreen');
-    document.getElementById('gameWrap').style.display = 'flex';
-    resizeStage();
-    const mapId = player.active_map && world.maps.find(m=>m.id===player.active_map)
-      ? player.active_map : world.maps[0].id;
-    enterMap(mapId, false);
-    updateHUD();
-    startGrowTimer();
-  }, 400);
-}
-
-function showSetup() {
-  hide('loadScreen');
-  document.getElementById('playerSetupWrap').style.display = 'flex';
-  setTimeout(() => document.getElementById('playerNameInput').focus(), 100);
-}
-
-function confirmPlayerSetup() {
-  const name = document.getElementById('playerNameInput').value.trim();
-  if (!name) { showToast('Enter your name first','error'); return; }
-  player.name = name; player.hasSetup = true;
-  player.energy = MAX_ENERGY; player.last_regen = Date.now();
-  savePlayer();
-  document.getElementById('playerSetupWrap').style.display = 'none';
-  show('loadScreen'); setLoad(80,'Building world…');
-  startGame();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// STAGE SIZING — contentArea stays strict 16:9
-// ═══════════════════════════════════════════════════════════════
-function resizeStage() {
-  const outer = document.getElementById('stageOuter');
-  const stage = document.getElementById('mapStage');
-  const area  = document.getElementById('contentArea');
-  if (!outer||!stage||!area) return;
-  const ow = outer.clientWidth, oh = outer.clientHeight, AR = 16/9;
-  const w = ow/oh > AR ? Math.round(oh*AR) : ow;
-  const h = ow/oh > AR ? oh : Math.round(ow/AR);
-  stage.style.width = area.style.width  = w+'px';
-  stage.style.height= area.style.height = h+'px';
-  const map = world?.maps?.find(m=>m.id===currentMapId);
-  if (map) renderMaskOverlay(map);
-}
-window.addEventListener('resize', resizeStage);
-
-// ═══════════════════════════════════════════════════════════════
-// MAP NAVIGATION
-// ═══════════════════════════════════════════════════════════════
-function enterMap(mapId, animate=true) {
-  const map = world.maps.find(m=>m.id===mapId);
-  if (!map) { showToast('Map not found','error'); return; }
-  if (!animate) { doEnterMap(map); return; }
-  const ov = document.getElementById('transitionOverlay');
-  ov.classList.add('fade-in');
-  setTimeout(() => { doEnterMap(map); ov.classList.remove('fade-in'); }, 380);
-}
-
-function doEnterMap(map) {
-  stopAmbient();
-  currentMapId = map.id;
-  player.active_map = map.id;
-  if (!player.visited_maps.includes(map.id)) player.visited_maps.push(map.id);
-  if (!player.map_states[map.id]) player.map_states[map.id] = {};
-  savePlayer();
-  closeActionPopup(); closeDialog();
-
-  const bg  = document.getElementById('mapBg');
-  const ph  = document.getElementById('mapBgPlaceholder');
-  if (map.background) { bg.src = map.background; bg.style.display='block'; ph.style.display='none'; }
-  else                { bg.style.display='none'; ph.style.display='flex'; }
-
-  renderObjects(map);
-  renderMaskOverlay(map);
-  initGrowTimers(map);
-  updateHUD();
-  renderMinimap();
-  showBanner(map.name);
-  setTimeout(() => tickAmbient(), 800);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RENDERING
-// ═══════════════════════════════════════════════════════════════
-function renderObjects(map) {
-  const layer = document.getElementById('objectLayer');
-  layer.innerHTML = '';
-  const os = player.map_states[map.id] || {};
-  const sorted = [...(map.objects||[])].sort((a,b)=>(a.z_order||0)-(b.z_order||0));
-
-  sorted.forEach(obj => {
-    const entity = world.entities?.find(e=>e.id===obj.entity_id);
-    if (!entity && !isPortal(obj)) return;
-
-    // Hidden objects: skip unless revealed
-    if (entity?.hidden) {
-      const s = os[obj.id];
-      if (!s?.revealed && s?.state !== 'found') return;
-    }
-    // Collected non-respawning objects: skip
-    if (os[obj.id]?.collected && entity && !entity.respawn) return;
-
-    const state   = os[obj.id]?.state || obj.state || 'idle';
-    const size    = obj.size || 48;
-    const rot     = obj.rotation || 0;
-    const label   = obj.label || entity?.name || (isPortal(obj)?'Portal':'Object');
-    const animCls = ANIM_CLASSES.has(obj.animation) ? 'anim-'+obj.animation : '';
-
-    // Outer div: position + translate(-50%,-50%) + rotation — NEVER animated
-    const el = document.createElement('div');
-    el.className = 'game-object';
-    el.dataset.objId = obj.id;
-    el.style.cssText = `left:${obj.x*100}%;top:${obj.y*100}%;z-index:${obj.z_order||10};transform:translate(-50%,-50%)${rot?` rotate(${rot}deg)`:''}`;
-
-    // Inner div: animation only — never translates
-    const inner = document.createElement('div');
-    inner.className = 'obj-inner' + (animCls ? ' '+animCls : '');
-
-    // Visual
-    const vis = document.createElement('div');
-    vis.className = 'obj-visual'; vis.style.position = 'relative';
-    if (entity?.sprite) {
-      const img = document.createElement('img');
-      img.className = 'obj-sprite';
-      img.src = entity.sprite; img.draggable = false;
-      img.style.width = img.style.height = size+'px';
-      vis.appendChild(img);
-    } else {
-      const ic = document.createElement('div');
-      ic.className = 'obj-icon';
-      ic.style.cssText = `width:${size}px;height:${size}px;font-size:${Math.round(size*.5)}px`;
-      ic.textContent = entity ? (CAT_ICON[entity.category]||'📦') : '🚪';
-      vis.appendChild(ic);
-    }
-
-    // Grow badge
-    const planted = os[obj.id]?.planted_at;
-    if (planted && entity?.grow_time_hours > 0) {
-      const growMs = entity.grow_time_hours * 3600000 / (entity.growth_speed_multiplier||1);
-      const remain = growMs - (Date.now()-planted);
-      if (remain > 0) {
-        const badge = document.createElement('div');
-        badge.className = 'obj-badge';
-        badge.dataset.plantedAt = planted;
-        badge.dataset.growMs    = growMs;
-        badge.textContent = formatDur(remain);
-        vis.appendChild(badge);
-      }
-    }
-
-    // State dot (non-idle, non-collected)
-    const states = entity?.states || [{id:'idle'}];
-    const stIdx  = states.findIndex(s=>s.id===state);
-    if (stIdx > 0 && stIdx < states.length-1) {
-      const dot = document.createElement('div');
-      dot.className = 'obj-dot';
-      vis.appendChild(dot);
-    }
-
-    inner.appendChild(vis);
-    const lbl = document.createElement('div');
-    lbl.className = 'obj-label';
-    lbl.textContent = showLabels ? label : '';
-    inner.appendChild(lbl);
-
-    el.appendChild(inner);
-    el.addEventListener('click', ev => { ev.stopPropagation(); handleClick(obj, entity, el); });
-    layer.appendChild(el);
-  });
-}
-
-function renderMaskOverlay(map) {
-  const svg = document.getElementById('maskOverlay');
-  svg.innerHTML = '';
-  if (!showMasks || !map.masks?.length) return;
-  const area = document.getElementById('contentArea');
-  const w = area.clientWidth, h = area.clientHeight;
-  map.masks.forEach(mask => {
-    const color = MASK_COLOR[mask.type] || 'rgba(180,100,100,.2)';
-    const pts   = mask.points.map(p=>`${p.x*w},${p.y*h}`).join(' ');
-    const poly  = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-    poly.setAttribute('points',pts); poly.setAttribute('fill',color);
-    poly.setAttribute('stroke','rgba(255,255,255,.2)'); poly.setAttribute('stroke-width','1');
-    svg.appendChild(poly);
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// INTERACTION POPUP
-// ═══════════════════════════════════════════════════════════════
-function handleClick(obj, entity, el) {
-  const map = world.maps.find(m=>m.id===currentMapId); if (!map) return;
-
-  // Portals: traverse immediately
-  if (isPortal(obj)) {
-    const portal = (map.portals||[]).find(p=>p.id===obj.portal_id);
-    if (!portal?.to) { showToast('Portal not linked','error'); return; }
-    if ((player.level||1) < (portal.requires_level||0)) { showToast(`Requires level ${portal.requires_level}`,'error'); return; }
-    enterMap(portal.to); return;
-  }
-  if (!entity) return;
-
-  const interactions = entity.interactions || [];
-  if (!interactions.length && !entity.collectible) return;
-  openActionPopup(obj, entity, interactions);
-}
-
-function openActionPopup(obj, entity, interactions) {
-  const os        = player.map_states[currentMapId] || {};
-  const curState  = os[obj.id]?.state || obj.state || 'idle';
-  const states    = entity.states || [{id:'idle'}];
-  const stIdx     = states.findIndex(s=>s.id===curState);
-  const isFirst   = stIdx <= 0;
-  const isLast    = stIdx >= states.length-1;
-  const stLabel   = states[stIdx]?.label || curState;
-  const stProg    = states.length > 1 ? ` (${stIdx+1}/${states.length})` : '';
-
-  const planted   = os[obj.id]?.planted_at;
-  const growMs    = entity.grow_time_hours>0 ? entity.grow_time_hours*3600000/(entity.growth_speed_multiplier||1) : 0;
-  const remain    = planted&&growMs>0 ? growMs-(Date.now()-planted) : 0;
-
-  let html = `<div class="popup-title">${entity.name}</div>`;
-  if (entity.description) html += `<div class="popup-desc">${entity.description}</div>`;
-  html += `<div class="popup-sep"></div>`;
-  html += `<div class="popup-state">${stLabel}${stProg}${remain>0?' · ⏱ '+formatDur(remain):(stIdx>0&&!isLast?' · ✓ Ready':'')}</div>`;
-  html += `<div class="popup-sep"></div>`;
-
-  // Filter by state — built-in trigger rules + explicit required_states list
-  const valid = interactions.filter(ix => {
-    // If the interaction declares required_states, the current state must be in that list
-    if (ix.required_states?.length && !ix.required_states.includes(curState)) return false;
-    // Built-in trigger/action state rules (apply when no explicit required_states set)
-    if (!ix.required_states?.length) {
-      if (ix.trigger==='harvest' || ix.action==='harvest') return isLast;
-      if (ix.trigger==='water'   || ix.action==='grow')    return !isLast;
-      if (ix.trigger==='plant')                            return isFirst;
-    }
-    return true;
-  });
-
-  if (!valid.length && !entity.collectible) {
-    html += `<div style="font-family:var(--font-m);font-size:.72rem;color:var(--dim);padding:6px 12px">No actions available.</div>`;
-  }
-
-  const ICONS = {click:'👆',collect:'🤲',water:'💧',harvest:'🌾',inspect:'🔍',plant:'🌱'};
-  valid.forEach(ix => {
-    const ri     = interactions.indexOf(ix);
-    // Multi-requirement check (backward compat with old single requires_entity_id)
-    const reqs   = ix.requires?.length ? ix.requires : (ix.requires_entity_id ? [ix.requires_entity_id] : []);
-    const unmet  = reqs.filter(rid => rid && !hasItem(rid));
-    const locked = unmet.length > 0;
-    const reqNames = unmet.map(rid => world.entities?.find(e=>e.id===rid)?.name||rid).filter(Boolean);
-    const icon   = ICONS[ix.trigger]||'▶';
-    const lbl    = ix.trigger.charAt(0).toUpperCase()+ix.trigger.slice(1);
-    html += `<button class="action-btn${locked?' locked':''}" ${locked?`title="Needs: ${reqNames.join(', ')}"`:''} 
-      onclick="${locked?'':'fireInteraction(\''+obj.id+'\',\''+ix.trigger+'\','+ri+')'}">
-      <span class="action-icon">${icon}</span>${lbl}
-      ${locked?`<span class="action-lock">🔒 ${reqNames.join(', ')}</span>`:''}
-    </button>`;
-  });
-
-  // Auto collect button
-  if (entity.collectible && !interactions.find(ix=>ix.trigger==='collect')) {
-    html += `<button class="action-btn" onclick="quickCollect('${obj.id}')"><span class="action-icon">🤲</span>Collect</button>`;
-  }
-
-  html += `<div class="popup-sep"></div>`;
-  html += `<button class="action-btn" onclick="closeActionPopup()"><span class="action-icon">✕</span>Close</button>`;
-
-  document.getElementById('actionPopup').innerHTML = html;
-  document.getElementById('actionOverlay').classList.add('open');
-}
-
-function closeActionPopup() {
-  document.getElementById('actionOverlay').classList.remove('open');
-  document.getElementById('actionPopup').innerHTML = '';
-}
-
-// Close popup when clicking contentArea background
-document.getElementById('contentArea').addEventListener('click', e => {
-  if (e.target===e.currentTarget || e.target.id==='mapBg' || e.target.id==='mapBgPlaceholder')
-    closeActionPopup();
-});
-
-// ═══════════════════════════════════════════════════════════════
-// INTERACTION EXECUTION
-// ═══════════════════════════════════════════════════════════════
-function fireInteraction(objId, trigger, ixIdx) {
-  closeActionPopup();
-  const map    = world.maps.find(m=>m.id===currentMapId);
-  const obj    = map?.objects?.find(o=>o.id===objId);
-  const entity = world.entities?.find(e=>e.id===obj?.entity_id);
-  if (!obj||!entity) return;
-  const ix = entity.interactions[ixIdx]; if (!ix) return;
-
-  // Check all required items (supports both old single-id and new array schema)
-  const reqs = ix.requires?.length ? ix.requires : (ix.requires_entity_id ? [ix.requires_entity_id] : []);
-  const unmetReq = reqs.find(rid => rid && !hasItem(rid));
-  if (unmetReq) {
-    const name = world.entities?.find(e=>e.id===unmetReq)?.name || 'required item';
-    showToast(`Need ${name}`,'error'); return;
-  }
-  if (ix.sound) try { new Audio(ix.sound).play(); } catch {}
-
-  switch(ix.action) {
-    case 'collect':   doCollect(obj,entity,ix);   break;
-    case 'grow':      doGrow(obj,entity,ix);      break;
-    case 'harvest':   doHarvest(obj,entity,ix);   break;
-    case 'reveal':    doReveal(obj,entity,ix);    break;
-    case 'transform': doTransform(obj,entity,ix); break;
-    case 'reward':    doReward(obj,entity,ix);    break;
-    case 'dialog':    openDialog(ix.dialog_id);   break;
-    case 'plant':     doPlant(obj,entity,ix);     break;
-    case 'unlock':    giveXP(20); showToast('Unlocked!'); break;
-    default:          showToast(ix.action); break;
-  }
-}
-
-function quickCollect(objId) {
-  closeActionPopup();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  const obj = map?.objects?.find(o=>o.id===objId);
-  const entity = world.entities?.find(e=>e.id===obj?.entity_id);
-  if (obj&&entity) doCollect(obj,entity,{reward:''});
-}
-
-// ── Individual actions ─────────────────────────────────
-function getObjState(mapId, objId) {
-  if (!player.map_states[mapId]) player.map_states[mapId] = {};
-  return player.map_states[mapId][objId] || {};
-}
-function setObjState(mapId, objId, patch) {
-  if (!player.map_states[mapId]) player.map_states[mapId] = {};
-  player.map_states[mapId][objId] = { ...getObjState(mapId,objId), ...patch };
-}
-
-function doCollect(obj, entity, ix) {
-  const cost = entity.category==='hazard' ? 'clear_hazard' : 'collect';
-  if (!useEnergy(cost)) return;
-  setObjState(currentMapId, obj.id, { state:'collected', collected:true, collected_at:Date.now() });
-  addItem(obj.entity_id, 1);
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(entity.category==='hazard' ? XP_REWARD.clear_hazard : XP_REWARD.collect);
-  savePlayer();
-  const map = world.maps.find(m=>m.id===currentMapId);
-  renderObjects(map);
-  const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
-  if (el) { const r=el.getBoundingClientRect(); spawnParticle(r.left+r.width/2, r.top, CAT_ICON[entity.category]||'✨'); }
-  showToast(`Collected ${entity.name}`);
-}
-
-function doGrow(obj, entity, ix) {
-  if (!useEnergy('water')) return;
-  const states  = entity.states || [{id:'idle'}];
-  const os      = getObjState(currentMapId, obj.id);
-  const cur     = os.state || obj.state || states[0].id;
-  const ci      = states.findIndex(s=>s.id===cur);
-  const ni      = Math.min(ci+1, states.length-1);
-  if (ni === ci) { showToast('Already at final state'); return; }
-  const next    = states[ni];
-  const atFinal = ni >= states.length-1;
-  setObjState(currentMapId, obj.id, { state:next.id, planted_at: atFinal ? null : Date.now() });
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(XP_REWARD.grow);
-  savePlayer();
-  renderObjects(world.maps.find(m=>m.id===currentMapId));
-  showToast(`${entity.name} → ${next.label||next.id}`);
-}
-
-function doHarvest(obj, entity, ix) {
-  if (!useEnergy('harvest')) return;
-  const states = entity.states || [{id:'idle'}];
-  const os     = getObjState(currentMapId, obj.id);
-  const cur    = os.state || obj.state || states[0].id;
-  if (cur !== states[states.length-1].id) { showToast(`${entity.name} isn't ready`,'error'); return; }
-  if (ix.reward) giveReward(ix.reward);
-  setObjState(currentMapId, obj.id, {
-    state:   entity.respawn ? states[0].id : 'harvested',
-    collected: !entity.respawn,
-    respawn_at: entity.respawn ? Date.now()+(entity.respawn_hours||24)*3600000 : null,
-    planted_at: null
-  });
-  giveXP(XP_REWARD.harvest);
-  savePlayer();
-  renderObjects(world.maps.find(m=>m.id===currentMapId));
-  showToast(`Harvested ${entity.name}`);
-}
-
-function doReveal(obj, entity, ix) {
-  if (!useEnergy('inspect')) return;
-  setObjState(currentMapId, obj.id, { state:'found', revealed:true });
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(XP_REWARD.reveal);
-  savePlayer();
-  renderObjects(world.maps.find(m=>m.id===currentMapId));
-  setTimeout(() => {
-    const el = document.querySelector(`[data-obj-id="${obj.id}"]`);
-    if (el) { el.classList.add('just-revealed'); setTimeout(()=>el.classList.remove('just-revealed'),700); }
-  }, 50);
-  showToast(`Discovered: ${entity.name}!`);
-}
-
-function doTransform(obj, entity, ix) {
-  const states = entity.states || [{id:'idle'}];
-  const os     = getObjState(currentMapId, obj.id);
-  const cur    = os.state || obj.state || states[0].id;
-  const ci     = states.findIndex(s=>s.id===cur);
-  const next   = states[Math.min(ci+1, states.length-1)];
-  setObjState(currentMapId, obj.id, { state:next.id });
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(10); savePlayer();
-  renderObjects(world.maps.find(m=>m.id===currentMapId));
-  showToast(`${entity.name} → ${next.label||next.id}`);
-}
-
-function doReward(obj, entity, ix) {
-  if (ix.reward) giveReward(ix.reward);
-  giveXP(10); showToast(`Reward received`);
-}
-
-function doPlant(obj, entity, ix) {
-  const unmet = (entity.place_requires||[]).find(rid=>!hasItem(rid));
-  if (unmet) { showToast(`Need ${world.entities?.find(e=>e.id===unmet)?.name||'required tool'}`,'error'); return; }
-  doGrow(obj, entity, ix);
-  giveXP(XP_REWARD.plant - XP_REWARD.grow); // top up to plant reward
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DIALOG
-// ═══════════════════════════════════════════════════════════════
-function openDialog(dialogId) {
-  const dlg = world.dialogs?.find(d=>d.id===dialogId);
-  if (!dlg) { showToast('Dialog not found','error'); return; }
-  showNode(dlg, dlg.start_node);
-}
-
-function showNode(dlg, nodeId) {
-  const node = dlg.nodes?.find(n=>n.id===nodeId);
-  if (!node) { closeDialog(); return; }
-  document.getElementById('dialogOverlay').classList.add('open');
-  const box = document.getElementById('dialogBox');
-  let html = '';
-  if (node.speaker) html += `<div class="dlg-speaker">${node.speaker}</div>`;
-  html += `<div class="dlg-text">${node.text||''}</div>`;
-  if (node.choices?.length) {
-    html += '<div class="dlg-choices">';
-    node.choices.forEach(c => {
-      const rwd = c.reward ? `<span class="dlg-reward">${c.reward}</span>` : '';
-      html += `<button class="dlg-choice" onclick="pickChoice('${dlg.id}','${c.next||''}','${c.reward||''}')">${c.text}${rwd}</button>`;
-    });
-    html += '</div>';
-  } else {
-    html += `<div class="dlg-choices"><button class="dlg-choice" onclick="closeDialog()">Continue…</button></div>`;
-  }
-  box.innerHTML = html;
-  giveXP(XP_REWARD.dialog);
-}
-
-function pickChoice(dlgId, nextId, reward) {
-  if (reward) giveReward(reward);
-  if (!nextId) { closeDialog(); return; }
-  const dlg = world.dialogs?.find(d=>d.id===dlgId);
-  if (dlg) showNode(dlg, nextId); else closeDialog();
-}
-
-function closeDialog() {
-  document.getElementById('dialogOverlay').classList.remove('open');
-  document.getElementById('dialogBox').innerHTML = '';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// INVENTORY & XP
-// ═══════════════════════════════════════════════════════════════
-function hasItem(entityId) { return (player.inventory||[]).some(i=>i.entity_id===entityId&&i.quantity>0); }
-
-function addItem(entityId, qty) {
-  if (!entityId) return;
-  const slot = player.inventory.find(i=>i.entity_id===entityId);
-  if (slot) slot.quantity += qty; else player.inventory.push({entity_id:entityId, quantity:qty});
-  updateInventoryUI();
-}
-
-function giveReward(str) {
-  if (!str) return;
-  const ent = world.entities?.find(e=>e.id===str||e.name.toLowerCase()===str.toLowerCase());
-  if (ent)            { addItem(ent.id,1); showToast(`+1 ${ent.name}`,'xp'); }
-  else if (/^\d+_coins$/.test(str)) { showToast(`+${str.replace('_coins','')} 🪙`,'xp'); }
-}
-
-function giveXP(amount) {
-  if (!amount) return;
-  player.xp = (player.xp||0) + amount;
-  const needed = player.level * XP_PER_LEVEL;
-  if (player.xp >= needed) { player.xp -= needed; player.level++; showToast(`🎉 Level ${player.level}!`,'xp'); }
-  const area = document.getElementById('contentArea');
-  const r = area?.getBoundingClientRect();
-  if (r) spawnXP(r.left+r.width/2, r.top+r.height-60, amount);
-  savePlayer(); updateHUD();
-}
-
-function updateInventoryUI() {
-  const el  = document.getElementById('invSlots'); if (!el) return;
-  const inv = (player.inventory||[]).filter(i=>i.quantity>0);
-  if (!inv.length) { el.innerHTML = '<div class="inv-empty">Empty</div>'; return; }
-  el.innerHTML = inv.map(slot => {
-    const ent = world.entities?.find(e=>e.id===slot.entity_id); if (!ent) return '';
-    const vis = ent.sprite
-      ? `<img class="inv-img" src="${ent.sprite}" draggable="false">`
-      : `<div class="inv-icon">${CAT_ICON[ent.category]||'📦'}</div>`;
-    return `<div class="inv-slot" title="${ent.name}" onclick="selectItem('${slot.entity_id}')">
-      ${vis}<div class="inv-name">${ent.name}</div>${slot.quantity>1?`<div class="inv-qty">×${slot.quantity}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-function selectItem(entityId) {
-  document.querySelectorAll('.inv-slot').forEach(s=>s.classList.remove('active'));
-  event?.currentTarget?.classList.add('active');
-  const ent = world.entities?.find(e=>e.id===entityId); if (!ent) return;
-  if (ent.category==='plant' || (ent.interactions||[]).some(ix=>ix.action==='plant')) {
-    enterPlantMode(entityId);
-  } else {
-    showToast(`Selected: ${ent.name}`);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ENERGY
-// ═══════════════════════════════════════════════════════════════
-function regenEnergy() {
-  const now = Date.now(), last = player.last_regen||now;
-  const pips = Math.floor((now-last) / ENERGY_REGEN_MS);
-  if (pips > 0) {
-    player.energy = Math.min(MAX_ENERGY, (player.energy||MAX_ENERGY) + pips);
-    player.last_regen = last + pips * ENERGY_REGEN_MS;
-    savePlayer();
-  }
-  return player.energy ?? MAX_ENERGY;
-}
-
-function useEnergy(action) {
-  const cost = ENERGY_COST[action] || 1;
-  const cur  = regenEnergy();
-  if (cur < cost) {
-    const wait = ENERGY_REGEN_MS - (Date.now()-(player.last_regen||Date.now()));
-    showToast(`Not enough energy — refills in ${formatDur(wait)}`,'error');
-    return false;
-  }
-  player.energy = cur - cost;
-  savePlayer(); updateEnergyUI();
-  return true;
-}
-
-function updateEnergyUI() {
-  const e = regenEnergy();
-  const pipsEl  = document.getElementById('energyPips');
-  const countEl = document.getElementById('energyCount');
-  if (pipsEl)  pipsEl.innerHTML  = Array.from({length:MAX_ENERGY},(_,i)=>`<div class="pip ${i<e?'on':'off'}"></div>`).join('');
-  if (countEl) countEl.textContent = `${e}/${MAX_ENERGY}`;
-}
-setInterval(() => { regenEnergy(); updateEnergyUI(); }, 30000);
-
-// ═══════════════════════════════════════════════════════════════
-// GROW TIMERS
-// ═══════════════════════════════════════════════════════════════
-function startGrowTimer() {
-  if (growInterval) clearInterval(growInterval);
-  growInterval = setInterval(tickGrowTimers, 10000);
-  tickGrowTimers();
-}
-
-function initGrowTimers(map) {
-  // Ensure editor-placed objects already in a mid-growth state get a planted_at
-  let dirty = false;
-  (map.objects||[]).forEach(obj => {
-    const entity = world.entities?.find(e=>e.id===obj.entity_id);
-    if (!entity?.grow_time_hours) return;
-    const states = entity.states||[{id:'idle'}];
-    const os = getObjState(map.id, obj.id);
-    const cur = os.state || obj.state || states[0].id;
-    const ci  = states.findIndex(s=>s.id===cur);
-    // mid-growth state with no timer: start one now
-    if (ci > 0 && ci < states.length-1 && !os.planted_at) {
-      setObjState(map.id, obj.id, { state:cur, planted_at:Date.now() });
-      dirty = true;
-    }
-  });
-  if (dirty) savePlayer();
-}
-
-function tickGrowTimers() {
-  if (!world||!currentMapId) return;
-  const map = world.maps.find(m=>m.id===currentMapId); if (!map) return;
-  const os  = player.map_states[currentMapId]||{};
-  let changed = false;
-
-  map.objects.forEach(obj => {
-    const entity = world.entities?.find(e=>e.id===obj.entity_id);
-    if (!entity?.grow_time_hours) return;
-    const s = os[obj.id]; if (!s?.planted_at) return;
-
-    const growMs  = entity.grow_time_hours*3600000/(entity.growth_speed_multiplier||1);
-    const elapsed = Date.now()-s.planted_at;
-
-    if (elapsed >= growMs) {
-      const states = entity.states||[{id:'idle'}];
-      const ci     = states.findIndex(st=>st.id===s.state);
-      if (ci >= 0 && ci < states.length-1) {
-        const next     = states[ci+1];
-        const overflow = elapsed - growMs;
-        const atFinal  = ci+1 >= states.length-1;
-        // carry overflow into next state timer — no time lost
-        setObjState(currentMapId, obj.id, { state:next.id, planted_at: atFinal ? null : Date.now()-overflow });
-        changed = true;
-        showToast(`${entity.name} → ${next.label||next.id}`);
-      }
-    }
-
-    // Respawn
-    if (s.respawn_at && Date.now() >= s.respawn_at) {
-      const states = entity.states||[{id:'idle'}];
-      setObjState(currentMapId, obj.id, { state:states[0].id, collected:false, respawn_at:null, planted_at:null });
-      changed = true; showToast(`${entity.name} has regrown`);
-    }
-  });
-
-  if (changed) { savePlayer(); renderObjects(map); }
-
-  // Update countdown badges
-  document.querySelectorAll('.obj-badge[data-planted-at]').forEach(b => {
-    const rem = parseInt(b.dataset.growMs) - (Date.now()-parseInt(b.dataset.plantedAt));
-    b.textContent = rem > 0 ? formatDur(rem) : 'Ready!';
-  });
-}
-
-function formatDur(ms) {
-  if (ms <= 0) return 'Ready!';
-  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PLANT MODE
-// ═══════════════════════════════════════════════════════════════
-function enterPlantMode(entityId) {
-  plantModeId = entityId;
-  document.getElementById('plantModeBar').classList.add('active');
-  document.getElementById('contentArea').classList.add('plant-mode');
-  closeActionPopup();
-  showToast('Click the map to plant');
-}
-
-function cancelPlantMode() {
-  plantModeId = null;
-  document.getElementById('plantModeBar').classList.remove('active');
-  document.getElementById('contentArea').classList.remove('plant-mode');
-}
-
-document.getElementById('mapStage').addEventListener('click', e => {
-  if (!plantModeId) return;
-  if (e.target.closest('.game-object')) return;
-  const area = document.getElementById('contentArea');
-  const r = area.getBoundingClientRect();
-  const x = (e.clientX-r.left)/r.width, y = (e.clientY-r.top)/r.height;
-  if (x<0||x>1||y<0||y>1) return;
-  doPlantOnMap(plantModeId, x, y);
-  cancelPlantMode();
-});
-
-function doPlantOnMap(entityId, x, y) {
-  const entity = world.entities?.find(e=>e.id===entityId); if (!entity) return;
-  const unmet  = (entity.place_requires||[]).find(rid=>!hasItem(rid));
-  if (unmet) { showToast(`Need ${world.entities?.find(e=>e.id===unmet)?.name||'required tool'}`,'error'); return; }
-  if (!useEnergy('plant')) return;
-  const map = world.maps.find(m=>m.id===currentMapId);
-  if (inMaskZone(map,x,y,'no_plant')) { showToast('Cannot plant here','error'); return; }
-
-  // Deduct from inventory
-  const slot = player.inventory.find(i=>i.entity_id===entityId);
-  if (slot) slot.quantity = Math.max(0, slot.quantity-1);
-
-  const newObj = {
-    id:           'placed_'+Date.now(),
-    entity_id:    entityId,
-    label:        '',
-    x, y,
-    size:         48,
-    z_order:      10,
-    rotation:     0,
-    animation:    entity.category==='plant' ? 'sway' : 'none',
-    collision:    'walkable',
-    trigger_radius: 8,
-    state:        entity.states?.[0]?.id || 'idle',
-    notes:        'player_placed'
-  };
-  if (!map.objects) map.objects = [];
-  map.objects.push(newObj);
-  setObjState(currentMapId, newObj.id, { state:newObj.state, planted_at: Date.now() });
-
-  giveXP(XP_REWARD.plant);
-  savePlayer();
-  renderObjects(map);
-  updateInventoryUI();
-  const area = document.getElementById('contentArea');
-  const ar   = area.getBoundingClientRect();
-  spawnParticle(ar.left+x*ar.width, ar.top+y*ar.height, '🌱');
-  showToast(`Planted ${entity.name}`);
-}
-
-function inMaskZone(map, x, y, type) {
-  return (map?.masks||[]).some(m => (!type||m.type===type) && pip(x,y,m.points));
-}
-function pip(x, y, pts) { // point-in-polygon ray cast
-  let inside = false;
-  for (let i=0,j=pts.length-1; i<pts.length; j=i++) {
-    const {x:xi,y:yi}=pts[i], {x:xj,y:yj}=pts[j];
-    if ((yi>y)!==(yj>y) && x<(xj-xi)*(y-yi)/(yj-yi)+xi) inside=!inside;
-  }
-  return inside;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// AMBIENT SOUND
-// ═══════════════════════════════════════════════════════════════
-function playAmbient(src) {
-  stopAmbient();
-  if (!src) return;
-  try { ambientAudio=new Audio(src); ambientAudio.loop=true; ambientAudio.volume=masterVolume*.4; ambientAudio.play().catch(()=>{}); } catch {}
-}
-function stopAmbient() {
-  if (ambientAudio) { try{ambientAudio.pause();}catch{} ambientAudio=null; }
-}
-function tickAmbient() {
-  const map = world?.maps?.find(m=>m.id===currentMapId); if (!map) return;
-  for (const obj of (map.objects||[])) {
-    const ent = world.entities?.find(e=>e.id===obj.entity_id);
-    if (ent?.ambient_sound) { playAmbient(ent.ambient_sound); return; }
-  }
-}
-function setVolume(v) { masterVolume=parseFloat(v); if(ambientAudio) ambientAudio.volume=masterVolume*.4; }
-
-// ═══════════════════════════════════════════════════════════════
-// HUD
-// ═══════════════════════════════════════════════════════════════
-function updateHUD() {
-  const xpNeeded = player.level * XP_PER_LEVEL;
-  setText('hudName',  player.name||'Gardener');
-  setText('hudLevel', `LVL ${player.level} · ${player.xp}/${xpNeeded} XP`);
-  document.getElementById('xpBar').style.width = (player.xp/xpNeeded*100)+'%';
-  const map = world?.maps?.find(m=>m.id===currentMapId);
-  if (map) {
-    setText('hudMap',     map.name);
-    setText('hudMapMeta', `Zone ${map.zone} · ${map.type}`);
-    document.getElementById('blightBar').style.width = (map.blight_level||0)+'%';
-  }
-  updateInventoryUI();
-  updateEnergyUI();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MINIMAP
-// ═══════════════════════════════════════════════════════════════
-function toggleMinimap() {
-  const mm = document.getElementById('minimap');
-  mm.classList.toggle('open');
-  if (mm.classList.contains('open')) renderMinimap();
-}
-function renderMinimap() {
-  const el = document.getElementById('minimapList'); if (!world?.maps) return;
-  el.innerHTML = world.maps.map(m => {
-    const vis = player.visited_maps?.includes(m.id);
-    const cur = m.id===currentMapId;
-    return `<div class="minimap-item ${cur?'current':''} ${!vis&&!cur?'unvisited':''}" onclick="mmNav('${m.id}')">
-      ${m.type==='top-down'?'🗺':'🏠'} ${vis||cur?m.name:'???'}
-    </div>`;
-  }).join('');
-}
-function mmNav(mapId) {
-  if (mapId===currentMapId) return;
-  const map     = world.maps.find(m=>m.id===currentMapId);
-  const linked  = (map?.portals||[]).some(p=>p.to===mapId);
-  const visited = player.visited_maps?.includes(mapId);
-  if (!linked&&!visited) { showToast('Find a portal to reach this map','error'); return; }
-  document.getElementById('minimap').classList.remove('open');
-  enterMap(mapId);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════════════════════════
-function openSettings() {
-  document.getElementById('settingsName').value = player.name||'';
-  document.getElementById('settingsVolume').value = masterVolume;
-  setText('labelsBtn', `Labels: ${showLabels?'On':'Off'}`);
-  document.getElementById('settingsPanel').classList.add('open');
-}
-function closeSettings() { document.getElementById('settingsPanel').classList.remove('open'); }
-function saveSettings() {
-  const name = document.getElementById('settingsName').value.trim();
-  if (name) player.name = name;
-  masterVolume = parseFloat(document.getElementById('settingsVolume').value);
-  setVolume(masterVolume); savePlayer(); updateHUD(); closeSettings(); showToast('Settings saved');
-}
-function toggleLabels() {
-  showLabels = !showLabels;
-  setText('labelsBtn', `Labels: ${showLabels?'On':'Off'}`);
-  const map = world?.maps?.find(m=>m.id===currentMapId);
-  if (map) renderObjects(map);
-}
-function resetProgress() {
-  if (!confirm('Reset all progress? This cannot be undone.')) return;
-  localStorage.removeItem('verdure_player'); location.reload();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════
-function isPortal(obj) {
-  if (obj.type==='portal') return true;
-  return world.entities?.find(e=>e.id===obj.entity_id)?.category === 'portal';
-}
-function showBanner(name) {
-  const b = document.getElementById('mapBanner');
-  b.textContent = name; b.classList.add('show');
-  setTimeout(()=>b.classList.remove('show'), 2200);
-}
-function show(id) { document.getElementById(id).style.display = 'flex'; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
-function setText(id, txt) { const el=document.getElementById(id); if(el) el.textContent=txt; }
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show'+(type?' '+type:'');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2500);
-}
-function spawnParticle(x, y, content, xp=false) {
-  const p = document.createElement('div');
-  p.className = xp ? 'xp-particle' : 'particle';
-  p.textContent = content; p.style.left=(x-12)+'px'; p.style.top=(y-12)+'px';
-  document.body.appendChild(p); setTimeout(()=>p.remove(), 1500);
-}
-function spawnXP(x, y, amt) { spawnParticle(x, y, `+${amt} XP`, true); }
-
-// ═══════════════════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════════════════
-init();
-</script>
+  <div id="toast"></div>
+
+  <script src="js/constants.js"></script>
+  <script src="js/bootstrap.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/interactions.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/energy.js"></script>
+  <script src="js/plant.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/helpers.js"></script>
 </body>
+
 </html>
