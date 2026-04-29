@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🍭 Merge Mania</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 20px auto;
+      text-align: center;
+      padding: 10px;
+    }
+
+    h1 {
+      color: white;
+      margin: 10px 0;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 15px;
+      font-size: 18px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+      background: #4a2c6d;
+      padding: 12px;
+      border-radius: 20px;
+      margin: 0 auto;
+      width: fit-content;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .tile {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      box-shadow: 0 5px 12px rgba(0, 0, 0, 0.35);
+      transition: transform 0.25s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    .tile.touching,
+    .tile.hint {
+      transform: scale(1.18);
+      box-shadow: 0 0 0 6px white, 0 0 0 10px #ffd700;
+      animation: hintPulse 1.2s infinite alternate ease-in-out;
+    }
+
+    @keyframes hintPulse {
+      from {
+        transform: scale(1.05);
+      }
+
+      to {
+        transform: scale(1.22);
+      }
+    }
+
+    .type-1 {
+      background: #ff4d4d;
+    }
+
+    .type-2 {
+      background: #4dff4d;
+    }
+
+    .type-3 {
+      background: #4d94ff;
+    }
+
+    .type-4 {
+      background: #ffd633;
+    }
+
+    .type-5 {
+      background: #ff80ff;
+    }
+
+    .type-6 {
+      background: #ffaa00;
+    }
+
+    .type-7 {
+      background: #00ffff;
+    }
+
+    .type-8 {
+      background: linear-gradient(45deg, #ffd700, #ffed4e);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .type-9 {
+      background: linear-gradient(45deg, #ffd700, #ffed4e);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+
+    .type-10 {
+      background: linear-gradient(45deg, #b19cd9, #dda0dd);
+      box-shadow: 0 0 20px rgba(185, 156, 217, 0.6);
+    }
+
+    .type-11 {
+      background: linear-gradient(45deg, #b19cd9, #dda0dd);
+      box-shadow: 0 0 20px rgba(185, 156, 217, 0.6);
+    }
+
+    .type-12 {
+      background: linear-gradient(45deg, #ff4500, #ff6347);
+      box-shadow: 0 0 25px rgba(255, 69, 0, 0.7);
+    }
+
+    .type-13 {
+      background: linear-gradient(45deg, #ff4500, #ff6347);
+      box-shadow: 0 0 25px rgba(255, 69, 0, 0.7);
+    }
+
+    .type-14 {
+      background: linear-gradient(45deg, #00bfff, #87ceeb);
+      box-shadow: 0 0 30px rgba(0, 191, 255, 0.8);
+    }
+
+    .type-15 {
+      background: linear-gradient(45deg, #00bfff, #87ceeb);
+      box-shadow: 0 0 30px rgba(0, 191, 255, 0.8);
+    }
+
+    .type-16 {
+      background: linear-gradient(45deg, #ff1493, #ff69b4);
+      box-shadow: 0 0 35px rgba(255, 20, 147, 0.9);
+    }
+
+    .type-17 {
+      background: linear-gradient(45deg, #ff1493, #ff69b4);
+      box-shadow: 0 0 35px rgba(255, 20, 147, 0.9);
+    }
+
+    .log {
+      margin-top: 20px;
+      background: rgba(0, 0, 0, 0.45);
+      color: #fff;
+      padding: 12px;
+      border-radius: 12px;
+      height: 160px;
+      overflow-y: auto;
+      font-size: 14px;
+      text-align: left;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px 28px;
+      font-size: 17px;
+      background: white;
+      color: #4a2c6d;
+      border: none;
+      border-radius: 50px;
+    }
+
+    .audio-notice {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 14px;
+      display: block;
+      z-index: 50;
+      text-align: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🍭 Merge Mania</h1>
+    <div class="stats">
+      <div>Score: <span id="score">0</span></div>
+      <div>Moves: <span id="moves">0</span></div>
+      <div>Best: <span id="highscore">0</span></div>
+    </div>
+    <div class="board" id="board"></div>
+
+    <div class="log" id="log">Game ready!<br>Swipe to move • 4+ matches create special objects • Combined matches =
+      powerful items</div>
+  </div>
+
+  <button onclick="newGame()">New Game</button>
+  <button onclick="testTShape()">Test T-Shape</button>
+  <button onclick="testLShape()">Test L-Shape</button>
+  <button onclick="testCrossShape()">Test Cross-Shape</button>
+  </div>
+
+  <div class="audio-notice" id="audioNotice" onclick="enableAudio()">🔊 Tap to enable sound effects</div>
+
+  <script>
+    const ROWS = 8, COLS = 8;
+    let board = [];
+    let tiles = []; // Cache for tile DOM elements
+    let score = 0;
+    let movesRemaining = 17;
+    let highScore = localStorage.getItem('mergeHighScore') || 0;
+    let isProcessing = false;
+    let hintTimeout = null;
+    let audioContext = null;
+
+    const defaultTileEmojis = ['🍒', '🍏', '🫐', '🍋', '🍓', '🍊', '🍉'];
+    const defaultExtraEmojis = ['⭐', '⭐', '💎', '💎', '🔥', '🔥', '⚡', '⚡', '🌟', '🌟'];
+    let emojis = defaultTileEmojis.concat(defaultExtraEmojis);
+
+    const minigameConfig = {
+      totalMovesAllowed: 17,
+      tileEmojis: defaultTileEmojis.slice(),
+      tileBackgrounds: [],
+      boardBackground: '#4a2c6d',
+      pageBackground: 'linear-gradient(135deg, #ff9a9e, #fad0c4)'
+    };
+
+    let gameStats = {
+      matchedTileCounts: {},
+      specialObjectsCreated: {}
+    };
+
+    let startRow = -1, startCol = -1;
+    let startX = 0, startY = 0;
+    let isDragging = false;
+
+    document.getElementById('highscore').textContent = highScore;
+
+    // Initialize audio context
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      // Resume audio context if suspended (required for mobile browsers)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+
+    // Play sound effect
+    function playSound(frequency, duration, type = 'sine') {
+      if (!audioContext || audioContext.state !== 'running') {
+        // Try to initialize audio if not ready
+        initAudio();
+        if (!audioContext || audioContext.state !== 'running') {
+          return; // Still not ready, skip sound
+        }
+      }
+
+      try {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = type;
+
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+      } catch (e) {
+        console.log('Audio play failed:', e);
+      }
+    }
+
+    function recordMatchedTile(type) {
+      if (!gameStats.matchedTileCounts[type]) gameStats.matchedTileCounts[type] = 0;
+      gameStats.matchedTileCounts[type]++;
+    }
+
+    function recordSpecialObjectCreated(type) {
+      if (!gameStats.specialObjectsCreated[type]) gameStats.specialObjectsCreated[type] = 0;
+      gameStats.specialObjectsCreated[type]++;
+    }
+
+    function getGameResult() {
+      const matchedTileCounts = {};
+      for (const type in gameStats.matchedTileCounts) {
+        const label = emojis[type - 1] || `type-${type}`;
+        matchedTileCounts[label] = gameStats.matchedTileCounts[type];
+      }
+      const specialObjectsCreated = {};
+      for (const type in gameStats.specialObjectsCreated) {
+        const label = emojis[type - 1] || `type-${type}`;
+        specialObjectsCreated[label] = gameStats.specialObjectsCreated[type];
+      }
+      return {
+        score,
+        movesRemaining,
+        matchedTileCounts,
+        specialObjectsCreated,
+        endedAt: new Date().toISOString()
+      };
+    }
+
+    function publishGameResult() {
+      const result = getGameResult();
+      window.miniGameResult = result;
+      if (typeof window.onMiniGameEnd === 'function') {
+        window.onMiniGameEnd(result);
+      }
+      if (window.parent && window.parent !== window && window.parent.postMessage) {
+        window.parent.postMessage({ source: 'merge-mania', event: 'gameOver', result }, '*');
+      }
+      if (window.opener && window.opener !== window && window.opener.postMessage) {
+        window.opener.postMessage({ source: 'merge-mania', event: 'gameOver', result }, '*');
+      }
+      return result;
+    }
+
+    function applyMinigameConfig() {
+      document.body.style.background = minigameConfig.pageBackground;
+      const boardEl = document.getElementById('board');
+      if (boardEl) {
+        boardEl.style.background = minigameConfig.boardBackground;
+      }
+    }
+
+    function setTileEmojis(customEmojis) {
+      for (let i = 0; i < defaultTileEmojis.length; i++) {
+        minigameConfig.tileEmojis[i] = customEmojis[i] || defaultTileEmojis[i];
+      }
+      emojis = minigameConfig.tileEmojis.concat(defaultExtraEmojis);
+    }
+
+    function startMergeMania(config = {}) {
+      Object.assign(minigameConfig, config);
+      if (Array.isArray(config.tileEmojis) && config.tileEmojis.length > 0) {
+        setTileEmojis(config.tileEmojis);
+      }
+      if (typeof config.totalMovesAllowed === 'number' && config.totalMovesAllowed >= 0) {
+        minigameConfig.totalMovesAllowed = config.totalMovesAllowed;
+      }
+      if (typeof config.boardBackground === 'string') {
+        minigameConfig.boardBackground = config.boardBackground;
+      }
+      if (typeof config.pageBackground === 'string') {
+        minigameConfig.pageBackground = config.pageBackground;
+      }
+      if (Array.isArray(config.tileBackgrounds)) {
+        minigameConfig.tileBackgrounds = config.tileBackgrounds;
+      }
+      movesRemaining = minigameConfig.totalMovesAllowed;
+      gameStats = { matchedTileCounts: {}, specialObjectsCreated: {} };
+      window.miniGameResult = null;
+      applyMinigameConfig();
+      newGame();
+      return getGameResult();
+    }
+
+    window.startMergeMania = startMergeMania;
+
+    function createBoard() {
+      board = [];
+      tiles = [];
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      boardEl.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+      boardEl.style.background = minigameConfig.boardBackground;
+
+      // Remove existing event listeners to prevent accumulation
+      boardEl.removeEventListener('touchstart', onStart);
+      boardEl.removeEventListener('mousedown', onStart);
+      boardEl.removeEventListener('touchend', onEnd);
+      boardEl.removeEventListener('mouseup', onEnd);
+      boardEl.removeEventListener('mouseleave', onEnd);
+
+      for (let r = 0; r < ROWS; r++) {
+        board[r] = [];
+        tiles[r] = [];
+        for (let c = 0; c < COLS; c++) {
+          let type = Math.floor(Math.random() * 7) + 1;
+          while ((r >= 2 && board[r - 1][c] === type && board[r - 2][c] === type) ||
+            (c >= 2 && board[r][c - 1] === type && board[r][c - 2] === type)) {
+            type = Math.floor(Math.random() * 7) + 1;
+          }
+
+          const tile = document.createElement('div');
+          tile.classList.add('tile', `type-${type}`);
+          tile.dataset.row = r;
+          tile.dataset.col = c;
+          tile.dataset.type = type;
+          tile.textContent = emojis[type - 1] || '';
+          const bgStyle = minigameConfig.tileBackgrounds[type - 1];
+          if (bgStyle) {
+            tile.style.background = bgStyle;
+          }
+          boardEl.appendChild(tile);
+          board[r][c] = type;
+          tiles[r][c] = tile; // Cache reference
+        }
+      }
+
+      const boardElRef = document.getElementById('board');
+      boardElRef.addEventListener('touchstart', onStart, { passive: false });
+      boardElRef.addEventListener('mousedown', onStart);
+      boardElRef.addEventListener('touchend', onEnd);
+      boardElRef.addEventListener('mouseup', onEnd);
+      boardElRef.addEventListener('mouseleave', onEnd);
+
+      updateMovesLeft();
+      resetHintTimer();
+      logMessage("=== New Game Started ===");
+      logMessage("Swipe to move • 4+ matches create special objects • Combined matches = powerful items");
+    }
+
+    function resetHintTimer() {
+      if (hintTimeout) clearTimeout(hintTimeout);
+      hintTimeout = setTimeout(showHint, 5200);
+    }
+
+    function showHint() {
+      if (isProcessing) return;
+
+      // Find a REAL valid swap that creates a match (only for regular tiles 1-7)
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = board[r][c];
+          if (!t || t > 7) continue; // Skip empty spaces and special objects
+
+          // Try swapping right
+          if (c < COLS - 1) {
+            if (wouldCreateMatch(r, c, r, c + 1)) {
+              highlightHint(r, c, r, c + 1);
+              return;
+            }
+          }
+          // Try swapping down
+          if (r < ROWS - 1) {
+            if (wouldCreateMatch(r, c, r + 1, c)) {
+              highlightHint(r, c, r + 1, c);
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    function wouldCreateMatch(r1, c1, r2, c2) {
+      // Temporarily swap
+      [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+
+      let createsMatch = false;
+
+      // Check if this swap creates any 3-in-a-row (only for regular tiles 1-7)
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS - 2; c++) {
+          const t = board[r][c];
+          if (t && t <= 7 && t === board[r][c + 1] && t === board[r][c + 2]) {
+            createsMatch = true;
+          }
+        }
+      }
+      for (let c = 0; c < COLS; c++) {
+        for (let r = 0; r < ROWS - 2; r++) {
+          const t = board[r][c];
+          if (t && t <= 7 && t === board[r + 1][c] && t === board[r + 2][c]) {
+            createsMatch = true;
+          }
+        }
+      }
+
+      // Swap back
+      [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+
+      return createsMatch;
+    }
+
+    function highlightHint(r1, c1, r2, c2) {
+      const tile1 = tiles[r1][c1];
+      const tile2 = tiles[r2][c2];
+
+      if (tile1) tile1.classList.add('hint');
+      if (tile2) tile2.classList.add('hint');
+
+      setTimeout(() => {
+        if (tile1) tile1.classList.remove('hint');
+        if (tile2) tile2.classList.remove('hint');
+        resetHintTimer();
+      }, 2200);
+    }
+
+    function updateMovesLeft() {
+      if (typeof minigameConfig.totalMovesAllowed === 'number') {
+        document.getElementById('moves').textContent = movesRemaining;
+        return movesRemaining;
+      }
+
+      let moves = 0;
+      // Check all possible adjacent swaps (only for regular tiles 1-7)
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const t = board[r][c];
+          if (!t || t > 7) continue; // Skip empty spaces and special objects
+          // Try swapping right
+          if (c < COLS - 1 && wouldCreateMatch(r, c, r, c + 1)) {
+            moves++;
+          }
+          // Try swapping down
+          if (r < ROWS - 1 && wouldCreateMatch(r, c, r + 1, c)) {
+            moves++;
+          }
+        }
+      }
+      document.getElementById('moves').textContent = moves;
+      return moves;
+    }
+
+    // Calculate combined match power and create special object
+    function createCombinedSpecialObject(specialMatches, position = null, isCascade = false) {
+      if (specialMatches.length === 0) return;
+
+      // Choose the highest-priority match for placement.
+      // Prefer cross > T > L > line matches, then longest.
+      const priority = match => {
+        if (match.orientation === 'cross-shape') return 4;
+        if (match.orientation === 't-shape') return 3;
+        if (match.orientation === 'l-shape') return 2;
+        return 1; // horizontal or vertical
+      };
+
+      const primaryMatch = specialMatches.reduce((best, current) => {
+        const bestPriority = priority(best);
+        const currentPriority = priority(current);
+        if (currentPriority !== bestPriority) {
+          return currentPriority > bestPriority ? current : best;
+        }
+        return current.length > best.length ? current : best;
+      });
+
+      // Calculate total power: sum of (match length - 2) for each match
+      // This gives 3-match = 1, 4-match = 2, 5-match = 3, etc.
+      let totalPower = 0;
+      specialMatches.forEach(match => {
+        totalPower += (match.length - 2);
+      });
+
+      // Convert total power back to effective match length
+      // 1 = 3-match, 2 = 4-match, 3 = 5-match, etc.
+      const effectiveLength = totalPower + 2;
+
+      // Cap at 8-match maximum
+      const finalLength = Math.min(effectiveLength, 8);
+
+      const specialType = getSpecialObjectType(finalLength, primaryMatch.orientation);
+
+      if (specialType > 0) {
+        let placeRow = primaryMatch.row;
+        let placeCol = primaryMatch.col;
+
+        if (primaryMatch.orientation === 'horizontal') {
+          placeCol = primaryMatch.col + Math.floor(primaryMatch.length / 2);
+        } else if (primaryMatch.orientation === 'vertical') {
+          placeRow = primaryMatch.row + Math.floor(primaryMatch.length / 2);
+        }
+
+        if (position && primaryMatch.orientation !== 't-shape' && primaryMatch.orientation !== 'l-shape' && primaryMatch.orientation !== 'cross-shape') {
+          // Use the computed match center for straight combos.
+          placeRow = placeRow;
+          placeCol = placeCol;
+        }
+
+        if (placeRow >= 0 && placeRow < ROWS && placeCol >= 0 && placeCol < COLS) {
+          board[placeRow][placeCol] = specialType;
+          recordSpecialObjectCreated(specialType);
+          const tile = tiles[placeRow][placeCol];
+          if (tile) {
+            tile.className = 'tile type-' + specialType;
+            tile.dataset.type = specialType;
+            tile.textContent = emojis[specialType - 1] || '';
+            tile.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s';
+            tile.style.transform = 'scale(1.5)';
+            tile.style.opacity = '1';
+            setTimeout(() => {
+              tile.style.transform = 'scale(1)';
+            }, 200);
+          }
+        }
+      }
+    }
+
+    // Get the special object type based on match length and orientation
+    // Get the special object type based on match length and orientation
+    function getSpecialObjectType(length, orientation) {
+      if (orientation === 't-shape') {
+        // T-shapes use a special base type (let's use 10 for T-shapes)
+        // Power based on total tiles: 5 tiles = basic T, higher = more powerful
+        const baseType = 10; // T-shape base
+        const powerLevel = Math.min(length - 5, 3); // 5 tiles = 0, 6 = 1, 7 = 2, 8+ = 3
+        return baseType + powerLevel;
+      } else if (orientation === 'l-shape') {
+        // L-shapes use base type 14
+        // Power based on total tiles: 5 tiles = basic L, higher = more powerful
+        const baseType = 14; // L-shape base
+        const powerLevel = Math.min(length - 5, 1); // 5 tiles = 0, 6+ = 1
+        return baseType + powerLevel;
+      } else if (orientation === 'cross-shape') {
+        // Cross shapes use base type 16
+        // Power based on total tiles: 5 tiles = basic cross, higher = more powerful
+        const baseType = 16; // Cross-shape base
+        const powerLevel = Math.min(length - 5, 1); // 5 tiles = 0, 6+ = 1
+        return baseType + powerLevel;
+      }
+
+      const baseType = orientation === 'horizontal' ? 8 : 9; // 8 = horizontal, 9 = vertical for 4-match
+      const lengthOffset = Math.min(length - 4, 4); // 4-match = 0, 5-match = 1, etc., max 8-match = 4
+      return baseType + (lengthOffset * 2);
+    }
+
+    // Rest of the code (onStart, onEnd, attemptSwap, findAndRemoveMatches, etc.) remains the same as previous stable version
+    function onStart(e) {
+      if (isProcessing) return;
+      e.preventDefault();
+      resetHintTimer();
+
+      const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+      const boardRect = e.currentTarget.getBoundingClientRect();
+      const padding = 12;
+      const gap = 6;
+      const effectiveSize = (boardRect.width - padding * 2 - gap * (COLS - 1)) / COLS;
+
+      const relX = clientX - boardRect.left - padding;
+      const relY = clientY - boardRect.top - padding;
+
+      const col = Math.floor(relX / (effectiveSize + gap));
+      const row = Math.floor(relY / (effectiveSize + gap));
+
+      if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
+
+      startRow = row;
+      startCol = col;
+      startX = clientX;
+      startY = clientY;
+      isDragging = true;
+
+      const tile = tiles[row][col];
+      if (tile) tile.classList.add('touching');
+    }
+
+    function onEnd(e) {
+      if (!isDragging || isProcessing || startRow === -1) return;
+      resetHintTimer();
+
+      const clientX = e.type.includes('touch') ? (e.changedTouches ? e.changedTouches[0].clientX : e.clientX) : e.clientX;
+      const clientY = e.type.includes('touch') ? (e.changedTouches ? e.changedTouches[0].clientY : e.clientY) : e.clientY;
+
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      const threshold = 35;
+
+      const tile = tiles[startRow][startCol];
+      if (tile) tile.classList.remove('touching');
+
+      isDragging = false;
+
+      if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+        startRow = startCol = -1;
+        return;
+      }
+
+      let targetRow = startRow;
+      let targetCol = startCol;
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        targetCol += deltaX > 0 ? 1 : -1;
+      } else {
+        targetRow += deltaY > 0 ? 1 : -1;
+      }
+
+      if (targetRow < 0 || targetRow >= ROWS || targetCol < 0 || targetCol >= COLS) {
+        startRow = startCol = -1;
+        return;
+      }
+
+      attemptSwap(startRow, startCol, targetRow, targetCol);
+      startRow = startCol = -1;
+    }
+
+    function attemptSwap(r1, c1, r2, c2) {
+      isProcessing = true;
+
+      const tile1 = tiles[r1][c1];
+      const tile2 = tiles[r2][c2];
+
+      if (!tile1 || !tile2) {
+        isProcessing = false;
+        return;
+      }
+
+      const tempHTML = tile1.innerHTML;
+      const tempType = tile1.dataset.type;
+      const tempClass = tile1.className;
+
+      tile1.innerHTML = tile2.innerHTML;
+      tile1.dataset.type = tile2.dataset.type;
+      tile1.className = tile2.className;
+
+      tile2.innerHTML = tempHTML;
+      tile2.dataset.type = tempType;
+      tile2.className = tempClass;
+
+      [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+
+      setTimeout(() => {
+        const matchResult = findAndRemoveMatches(true, { row: r1, col: c1 });
+        if (matchResult.hasMatch) {
+          playSound(523, 0.2); // C5 note for match
+          if (typeof minigameConfig.totalMovesAllowed === 'number') {
+            movesRemaining = Math.max(0, movesRemaining - 1);
+            updateMovesLeft();
+          }
+
+          // Create combined special object for all 4+ matches
+          if (matchResult.specialMatches.length > 0) {
+            createCombinedSpecialObject(matchResult.specialMatches, null, false);
+          }
+
+          setTimeout(dropAndRefill, 350);
+        } else {
+          playSound(220, 0.3, 'sawtooth'); // A3 low note for invalid move
+          // Invalid move - swap back
+          const tempHTML2 = tile1.innerHTML;
+          const tempType2 = tile1.dataset.type;
+          const tempClass2 = tile1.className;
+
+          tile1.innerHTML = tile2.innerHTML;
+          tile1.dataset.type = tile2.dataset.type;
+          tile1.className = tile2.className;
+
+          tile2.innerHTML = tempHTML2;
+          tile2.dataset.type = tempType2;
+          tile2.className = tempClass2;
+
+          [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+
+          isProcessing = false;
+          updateMovesLeft();
+        }
+      }, 220);
+    }
+
+    function findAndRemoveMatches(checkSpecial = false, swapPos = null, isCascade = false) {
+      let hasMatch = false;
+      const toRemove = new Set();
+      let specialMatches = [];
+
+      // Check horizontal matches
+      for (let r = 0; r < ROWS; r++) {
+        let matchLength = 1;
+        let currentType = board[r][0];
+
+        for (let c = 1; c < COLS; c++) {
+          if (board[r][c] === currentType && currentType > 0) {
+            matchLength++;
+          } else {
+            if (matchLength >= 3) {
+              hasMatch = true;
+              for (let i = 0; i < matchLength; i++) {
+                toRemove.add(r + "-" + (c - matchLength + i));
+              }
+              if (matchLength >= 4 && checkSpecial) {
+                specialMatches.push({
+                  type: currentType,
+                  length: matchLength,
+                  orientation: 'horizontal',
+                  row: r,
+                  col: c - matchLength,
+                  swapPos: swapPos
+                });
+              }
+            }
+            matchLength = 1;
+            currentType = board[r][c];
+          }
+        }
+        // Check the last sequence
+        if (matchLength >= 3) {
+          hasMatch = true;
+          for (let i = 0; i < matchLength; i++) {
+            toRemove.add(r + "-" + (COLS - matchLength + i));
+          }
+          if (matchLength >= 4 && checkSpecial) {
+            specialMatches.push({
+              type: currentType,
+              length: matchLength,
+              orientation: 'horizontal',
+              row: r,
+              col: COLS - matchLength,
+              swapPos: swapPos
+            });
+          }
+        }
+      }
+
+      // Check vertical matches
+      for (let c = 0; c < COLS; c++) {
+        let matchLength = 1;
+        let currentType = board[0][c];
+
+        for (let r = 1; r < ROWS; r++) {
+          if (board[r][c] === currentType && currentType > 0) {
+            matchLength++;
+          } else {
+            if (matchLength >= 3) {
+              hasMatch = true;
+              for (let i = 0; i < matchLength; i++) {
+                toRemove.add((r - matchLength + i) + "-" + c);
+              }
+              if (matchLength >= 4 && checkSpecial) {
+                specialMatches.push({
+                  type: currentType,
+                  length: matchLength,
+                  orientation: 'vertical',
+                  row: r - matchLength,
+                  col: c,
+                  swapPos: swapPos
+                });
+              }
+            }
+            matchLength = 1;
+            currentType = board[r][c];
+          }
+        }
+        // Check the last sequence
+        if (matchLength >= 3) {
+          hasMatch = true;
+          for (let i = 0; i < matchLength; i++) {
+            toRemove.add((ROWS - matchLength + i) + "-" + c);
+          }
+          if (matchLength >= 4 && checkSpecial) {
+            specialMatches.push({
+              type: currentType,
+              length: matchLength,
+              orientation: 'vertical',
+              row: ROWS - matchLength,
+              col: c,
+              swapPos: swapPos
+            });
+          }
+        }
+      }
+
+      // Check for T-shaped combos (horizontal + vertical sharing center tile)
+      if (checkSpecial) {
+        // Find all horizontal matches of 3+
+        const horizontalMatches = [];
+        for (let r = 0; r < ROWS; r++) {
+          let matchLength = 1;
+          let currentType = board[r][0];
+          let startCol = 0;
+
+          for (let c = 1; c < COLS; c++) {
+            if (board[r][c] === currentType && currentType > 0) {
+              matchLength++;
+            } else {
+              if (matchLength >= 3) {
+                horizontalMatches.push({
+                  row: r,
+                  col: startCol,
+                  length: matchLength,
+                  type: currentType
+                });
+              }
+              matchLength = 1;
+              currentType = board[r][c];
+              startCol = c;
+            }
+          }
+          // Check the last sequence
+          if (matchLength >= 3) {
+            horizontalMatches.push({
+              row: r,
+              col: startCol,
+              length: matchLength,
+              type: currentType
+            });
+          }
+        }
+
+        // Find all vertical matches of 3+
+        const verticalMatches = [];
+        for (let c = 0; c < COLS; c++) {
+          let matchLength = 1;
+          let currentType = board[0][c];
+          let startRow = 0;
+
+          for (let r = 1; r < ROWS; r++) {
+            if (board[r][c] === currentType && currentType > 0) {
+              matchLength++;
+            } else {
+              if (matchLength >= 3) {
+                verticalMatches.push({
+                  row: startRow,
+                  col: c,
+                  length: matchLength,
+                  type: currentType
+                });
+              }
+              matchLength = 1;
+              currentType = board[r][c];
+              startRow = r;
+            }
+          }
+          // Check the last sequence
+          if (matchLength >= 3) {
+            verticalMatches.push({
+              row: startRow,
+              col: c,
+              length: matchLength,
+              type: currentType
+            });
+          }
+        }
+
+        // Find T-shaped intersections
+        for (const hMatch of horizontalMatches) {
+          for (const vMatch of verticalMatches) {
+            if (hMatch.type === vMatch.type) {
+              // Check if they intersect at exactly one point
+              const hStart = hMatch.col;
+              const hEnd = hMatch.col + hMatch.length - 1;
+              const vStart = vMatch.row;
+              const vEnd = vMatch.row + vMatch.length - 1;
+
+              // Find intersection points
+              const intersectRow = hMatch.row;
+              const intersectCols = [];
+              for (let c = Math.max(hStart, vMatch.col); c <= Math.min(hEnd, vMatch.col); c++) {
+                if (c >= hStart && c <= hEnd && vMatch.col === c) {
+                  intersectCols.push(c);
+                }
+              }
+
+              // T-shape: horizontal and vertical intersect at exactly one tile
+              if (intersectCols.length === 1 &&
+                intersectRow >= vStart && intersectRow <= vEnd) {
+                const centerRow = intersectRow;
+                const centerCol = intersectCols[0];
+
+                // Mark all tiles in the T-shape for removal
+                // Horizontal part
+                for (let c = hStart; c <= hEnd; c++) {
+                  toRemove.add(centerRow + "-" + c);
+                }
+                // Vertical part (excluding the center which is already added)
+                for (let r = vStart; r <= vEnd; r++) {
+                  if (r !== centerRow) {
+                    toRemove.add(r + "-" + centerCol);
+                  }
+                }
+
+                // Create T-shaped special match
+                specialMatches.push({
+                  type: hMatch.type,
+                  length: hMatch.length + vMatch.length - 1, // Total unique tiles
+                  orientation: 't-shape',
+                  row: centerRow,
+                  col: centerCol,
+                  swapPos: swapPos,
+                  isTShape: true,
+                  horizontalLength: hMatch.length,
+                  verticalLength: vMatch.length
+                });
+
+                hasMatch = true;
+              }
+            }
+          }
+        }
+
+        // Check for L-shaped combos (horizontal + vertical intersecting at corner)
+        for (const hMatch of horizontalMatches) {
+          for (const vMatch of verticalMatches) {
+            if (hMatch.type === vMatch.type) {
+              // Check for L-shape: intersect at exactly one corner (not middle)
+              const hStart = hMatch.col;
+              const hEnd = hMatch.col + hMatch.length - 1;
+              const vStart = vMatch.row;
+              const vEnd = vMatch.row + vMatch.length - 1;
+
+              // Find intersection points
+              const intersectRow = hMatch.row;
+              const intersectCols = [];
+              for (let c = Math.max(hStart, vMatch.col); c <= Math.min(hEnd, vMatch.col); c++) {
+                if (c >= hStart && c <= hEnd && vMatch.col === c) {
+                  intersectCols.push(c);
+                }
+              }
+
+              // L-shape: horizontal and vertical intersect at exactly one tile AND it's at an end/corner
+              if (intersectCols.length === 1 &&
+                intersectRow >= vStart && intersectRow <= vEnd) {
+                const centerRow = intersectRow;
+                const centerCol = intersectCols[0];
+
+                // Check if intersection is at a corner (not middle of either line)
+                const isHStart = (centerCol === hStart);
+                const isHEnd = (centerCol === hEnd);
+                const isVStart = (centerRow === vStart);
+                const isVEnd = (centerRow === vEnd);
+
+                // Must be at a corner (one end of horizontal AND one end of vertical)
+                const isCorner = (isHStart || isHEnd) && (isVStart || isVEnd);
+
+                if (isCorner) {
+                  // Mark all tiles in the L-shape for removal
+                  // Horizontal part
+                  for (let c = hStart; c <= hEnd; c++) {
+                    toRemove.add(centerRow + "-" + c);
+                  }
+                  // Vertical part (excluding the center which is already added)
+                  for (let r = vStart; r <= vEnd; r++) {
+                    if (r !== centerRow) {
+                      toRemove.add(r + "-" + centerCol);
+                    }
+                  }
+
+                  // Create L-shaped special match
+                  specialMatches.push({
+                    type: hMatch.type,
+                    length: hMatch.length + vMatch.length - 1, // Total unique tiles
+                    orientation: 'l-shape',
+                    row: centerRow,
+                    col: centerCol,
+                    swapPos: swapPos,
+                    isLShape: true,
+                    horizontalLength: hMatch.length,
+                    verticalLength: vMatch.length
+                  });
+
+                  hasMatch = true;
+                }
+              }
+            }
+          }
+        }
+
+        // Check for Cross-shaped combos (horizontal + vertical intersecting in middle)
+        for (const hMatch of horizontalMatches) {
+          for (const vMatch of verticalMatches) {
+            if (hMatch.type === vMatch.type && hMatch.length >= 3 && vMatch.length >= 3) {
+              // Check for cross: intersect in the middle of both lines
+              const hStart = hMatch.col;
+              const hEnd = hMatch.col + hMatch.length - 1;
+              const hMiddle = hMatch.col + Math.floor(hMatch.length / 2);
+
+              const vStart = vMatch.row;
+              const vEnd = vMatch.row + vMatch.length - 1;
+              const vMiddle = vMatch.row + Math.floor(vMatch.length / 2);
+
+              // Cross requires: both lines are odd length (so they have true middles)
+              // and they intersect at both middles
+              const hIsOdd = hMatch.length % 2 === 1;
+              const vIsOdd = vMatch.length % 2 === 1;
+
+              if (hIsOdd && vIsOdd &&
+                hMatch.row === vMiddle && vMatch.col === hMiddle) {
+
+                // Mark all tiles in the cross for removal
+                // Horizontal part
+                for (let c = hStart; c <= hEnd; c++) {
+                  toRemove.add(vMiddle + "-" + c);
+                }
+                // Vertical part (excluding the center which is already added)
+                for (let r = vStart; r <= vEnd; r++) {
+                  if (r !== vMiddle) {
+                    toRemove.add(r + "-" + hMiddle);
+                  }
+                }
+
+                // Create cross-shaped special match
+                specialMatches.push({
+                  type: hMatch.type,
+                  length: hMatch.length + vMatch.length - 1, // Total unique tiles
+                  orientation: 'cross-shape',
+                  row: vMiddle,
+                  col: hMiddle,
+                  swapPos: swapPos,
+                  isCrossShape: true,
+                  horizontalLength: hMatch.length,
+                  verticalLength: vMatch.length
+                });
+
+                hasMatch = true;
+              }
+            }
+          }
+        }
+      }
+
+      if (hasMatch) {
+        score += toRemove.size * 12;
+        document.getElementById('score').textContent = score;
+
+        toRemove.forEach(pos => {
+          const [r, c] = pos.split('-').map(Number);
+          const tile = tiles[r][c];
+          const removedType = board[r][c];
+          if (removedType > 0) {
+            recordMatchedTile(removedType);
+          }
+          if (tile) {
+            tile.style.transition = 'transform 0.35s, opacity 0.35s';
+            tile.style.transform = 'scale(0.15)';
+            tile.style.opacity = '0';
+          }
+          board[r][c] = 0;
+        });
+      }
+
+      return { hasMatch, specialMatches };
+    }
+
+    function dropAndRefill() {
+      for (let c = 0; c < COLS; c++) {
+        let writePos = ROWS - 1;
+        for (let r = ROWS - 1; r >= 0; r--) {
+          if (board[r][c] !== 0) {
+            if (r !== writePos) {
+              board[writePos][c] = board[r][c];
+              board[r][c] = 0;
+            }
+            writePos--;
+          }
+        }
+        for (let r = writePos; r >= 0; r--) {
+          board[r][c] = Math.floor(Math.random() * 7) + 1;
+        }
+      }
+
+      setTimeout(refreshVisualBoard, 300);
+      setTimeout(processMatchesAfterDrop, 650);
+    }
+
+    function processMatchesAfterDrop() {
+      const matchResult = findAndRemoveMatches(true, null, true); // isCascade = true
+      if (matchResult.hasMatch) {
+        // Create combined special object for cascade 4+ matches
+        if (matchResult.specialMatches.length > 0) {
+          createCombinedSpecialObject(matchResult.specialMatches, null, true);
+        }
+
+        setTimeout(dropAndRefill, 350); // Continue cascade
+      } else {
+        isProcessing = false;
+        updateMovesLeft();
+        checkGameOver();
+        resetHintTimer();
+      }
+    }
+
+    function refreshVisualBoard() {
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const tile = tiles[r][c];
+          const type = board[r][c];
+          if (type > 0) {
+            tile.className = 'tile type-' + type;
+            tile.dataset.type = type;
+            tile.textContent = emojis[type - 1];
+            tile.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s';
+            tile.style.transform = 'translateY(-80px)';
+            tile.style.opacity = '0';
+
+            setTimeout(() => {
+              tile.style.transform = 'translateY(0)';
+              tile.style.opacity = '1';
+            }, 10);
+          }
+        }
+      }
+    }
+
+    function checkGameOver() {
+      const movesLeft = updateMovesLeft();
+      if (movesLeft === 0) {
+        if (hintTimeout) {
+          clearTimeout(hintTimeout);
+          hintTimeout = null;
+        }
+        playSound(146, 1.0, 'sawtooth'); // D3 low note for game over
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('mergeHighScore', highScore);
+          document.getElementById('highscore').textContent = highScore;
+        }
+        publishGameResult();
+      }
+    }
+
+    function logMessage(msg) {
+      const logEl = document.getElementById('log');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      logEl.innerHTML += '<div>[' + time + '] ' + msg + '</div>';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function newGame() {
+      score = 0;
+      movesRemaining = minigameConfig.totalMovesAllowed;
+      document.getElementById('score').textContent = '0';
+      document.getElementById('moves').textContent = movesRemaining;
+      isProcessing = false;
+      if (hintTimeout) {
+        clearTimeout(hintTimeout);
+        hintTimeout = null;
+      }
+      gameStats = { matchedTileCounts: {}, specialObjectsCreated: {} };
+      createBoard();
+    }
+
+    // Enable audio on user interaction
+    function enableAudio() {
+      initAudio();
+      // Hide the audio notice
+      const notice = document.getElementById('audioNotice');
+      if (notice) notice.style.display = 'none';
+      // Remove the listeners after first interaction
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+      document.removeEventListener('keydown', enableAudio);
+    }
+
+    // Test T-shape detection
+    function testTShape() {
+      // Clear the board first
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          board[r][c] = 0;
+        }
+      }
+
+      // Create a T-shape with 🍒 (type 1)
+      // Horizontal: row 3, cols 2,3,4
+      // Vertical: col 3, rows 1,2,3 (sharing row 3 col 3)
+      board[3][2] = 1; // 🍒
+      board[3][3] = 1; // 🍒
+      board[3][4] = 1; // 🍒
+      board[1][3] = 1; // 🍒
+      board[2][3] = 1; // 🍒
+
+      // Fill the rest with random tiles
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] === 0) {
+            board[r][c] = Math.floor(Math.random() * 7) + 1;
+          }
+        }
+      }
+
+      // Remove any accidental matches
+      const result = findAndRemoveMatches(true);
+      if (result.hasMatch) {
+        dropAndRefill();
+      }
+
+      refreshVisualBoard();
+      console.log('T-shape test board created');
+    }
+
+    // Test L-shape detection
+    function testLShape() {
+      // Clear the board first
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          board[r][c] = 0;
+        }
+      }
+
+      // Create an L-shape with 🍏 (type 2)
+      // Horizontal: row 3, cols 2,3,4
+      // Vertical: col 4, rows 1,2,3 (sharing row 3 col 4 - corner intersection)
+      board[3][2] = 2; // 🍏
+      board[3][3] = 2; // 🍏
+      board[3][4] = 2; // 🍏
+      board[1][4] = 2; // 🍏
+      board[2][4] = 2; // 🍏
+
+      // Fill the rest with random tiles
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] === 0) {
+            board[r][c] = Math.floor(Math.random() * 7) + 1;
+          }
+        }
+      }
+
+      // Remove any accidental matches
+      const result = findAndRemoveMatches(false);
+      if (result.hasMatch) {
+        dropAndRefill();
+      }
+
+      refreshVisualBoard();
+      console.log('L-shape test board created');
+    }
+
+    // Test Cross-shape detection
+    function testCrossShape() {
+      // Clear the board first
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          board[r][c] = 0;
+        }
+      }
+
+      // Create a Cross-shape with 🫐 (type 3)
+      // Horizontal: row 3, cols 2,3,4 (odd length, middle at col 3)
+      // Vertical: col 3, rows 1,2,3,4,5 (odd length, middle at row 3)
+      board[3][2] = 3; // 🫐
+      board[3][3] = 3; // 🫐 (center)
+      board[3][4] = 3; // 🫐
+      board[1][3] = 3; // 🫐
+      board[2][3] = 3; // 🫐
+      board[4][3] = 3; // 🫐
+      board[5][3] = 3; // 🫐
+
+      // Fill the rest with random tiles
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (board[r][c] === 0) {
+            board[r][c] = Math.floor(Math.random() * 7) + 1;
+          }
+        }
+      }
+
+      // Remove any accidental matches
+      const result = findAndRemoveMatches(true);
+      if (result.hasMatch) {
+        dropAndRefill();
+      }
+
+      refreshVisualBoard();
+      console.log('Cross-shape test board created');
+    }
+
+    // Add to window for testing
+    window.testTShape = testTShape;
+    window.testLShape = testLShape;
+    window.testCrossShape = testCrossShape;
+
+    // Add multiple event listeners for audio enablement
+    document.addEventListener('click', enableAudio);
+    document.addEventListener('touchstart', enableAudio);
+    document.addEventListener('keydown', enableAudio);
+
+    window.onload = () => startMergeMania();
+  </script>
+</body>
+
+</html>
