@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verdure — World Editor</title>
+  <link rel="stylesheet" href="editor.css">
+</head>
+
+<body>
+  >
+  <header>
+    <div class="logo">🌿 Verdure <span>World Editor v0.3</span></div>
+    <div class="htabs">
+      <button class="htab active" id="tabMaps" onclick="switchTab('maps')">🗺 Maps</button>
+      <button class="htab" id="tabEntities" onclick="switchTab('entities')">🌿 Entities</button>
+      <button class="htab" id="tabAssets" onclick="switchTab('assets')">🖼 Assets</button>
+      <button class="htab" id="tabJson" onclick="switchTab('json')">{ } JSON</button>
+    </div>
+    <div class="hactions">
+      <button class="btn" onclick="importWorld()">Import</button>
+      <button class="btn primary" onclick="exportWorld()">Export JSON</button>
+    </div>
+  </header>
+
+  <!-- MAPS TAB -->
+  <div class="workspace" id="mapsTab">
+    <div class="sbl">
+      <div class="ss">
+        <div class="slabel">Maps</div>
+        <button class="btn primary" style="width:100%" onclick="openNewMapModal()">+ New Map</button>
+      </div>
+      <div class="lscroll" id="mapList"></div>
+    </div>
+    <div class="canvas-area">
+      <div class="ctoolbar">
+        <button class="tbtn active" id="tSelect" title="Select" onclick="setTool('select')">↖</button>
+        <button class="tbtn" id="tPlace" title="Place Object" onclick="setTool('place')">＋</button>
+        <button class="tbtn" id="tPortal" title="Add Portal" onclick="setTool('portal')">🚪</button>
+        <button class="tbtn" id="tMask" title="Draw Mask" onclick="setTool('mask')">⬡</button>
+        <div class="tsep"></div>
+        <button class="tbtn" title="Upload BG" onclick="pickFile('image/*',loadBg)">🖼</button>
+        <button class="tbtn" title="Clear BG" onclick="clearBg()">✕</button>
+        <div class="tsep"></div>
+        <button class="tbtn" id="tMaskVis" title="Toggle masks" onclick="toggleMaskVis()"
+          style="font-size:.65rem;letter-spacing:0">MSK</button>
+        <div class="tsep"></div>
+        <span style="font-family:DM Mono, monospace;font-size:.7rem;color:var(--dim);margin-left:4px" id="cInfo">No map
+          selected</span>
+      </div>
+      <div class="cwrap">
+        <div class="cempty" id="cEmpty">Select or create a map to begin</div>
+        <div id="mapCanvas" style="display:none">
+          <img id="mapBg" src="" style="display:none">
+          <div id="mapBgPh">
+            <div class="bi">🌱</div>
+            <div>Upload a background image</div>
+          </div>
+          <svg id="maskLayer"
+            style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:50"></svg>
+          <div id="placedObjs"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sbr">
+      <div class="phead">Properties</div>
+      <div class="pbody" id="propsBody">
+        <div class="empty-s">
+          <div class="esi">🗺</div>
+          <div>Select a map or object</div>
+        </div>
+      </div>
+      <div class="pfooter" id="propsFooter" style="display:none">
+        <button class="btn danger" style="flex:1" onclick="deleteSelected()">Delete</button>
+        <button class="btn primary" style="flex:2" onclick="applyProps()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTITIES TAB -->
+  <div class="workspace" id="entitiesTab" style="display:none">
+    <div class="elib">
+      <div class="ss">
+        <div class="slabel">Entities</div>
+        <button class="btn primary" style="width:100%" onclick="openNewEntityModal()">+ New Entity</button>
+      </div>
+      <div style="padding:6px 10px;border-bottom:1px solid var(--border)">
+        <div class="tags" id="catFilter">
+          <div class="tag active" onclick="filterCat('all',this)">All</div>
+          <div class="tag" onclick="filterCat('tool',this)">🛠</div>
+          <div class="tag" onclick="filterCat('plant',this)">🌿</div>
+          <div class="tag" onclick="filterCat('building',this)">🏚</div>
+          <div class="tag" onclick="filterCat('creature',this)">🐝</div>
+          <div class="tag" onclick="filterCat('hidden_object',this)">🔍</div>
+          <div class="tag" onclick="filterCat('portal',this)">🚪</div>
+          <div class="tag" onclick="filterCat('minigame',this)">🎮</div>
+          <div class="tag" onclick="filterCat('decoration',this)">🪨</div>
+          <div class="tag" onclick="filterCat('hazard',this)">⚠</div>
+        </div>
+      </div>
+      <div class="lscroll" id="entityList"></div>
+    </div>
+    <div class="eform" id="entityForm">
+      <div class="empty-s">
+        <div class="esi">🌾</div>
+        <div>Select an entity to edit</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSETS TAB -->
+  <div class="workspace" id="assetsTab" style="display:none">
+    <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:Playfair Display, Georgia, serif;font-size:1.2rem;color:var(--bright)">Asset Library
+          </div>
+          <div class="fhint" style="margin-top:4px">Images and audio referenced by entities. Unused assets are removed
+            on export.</div>
+        </div>
+        <button class="btn primary" onclick="addAssetManual()">+ Upload Asset</button>
+      </div>
+      <div class="agrid" id="assetGrid"></div>
+    </div>
+  </div>
+
+  <!-- JSON TAB -->
+  <div class="workspace" id="jsonTab" style="display:none">
+    <div class="jswrap">
+      <div class="jstb">
+        <button class="btn" onclick="renderJson()">Refresh</button>
+        <button class="btn" onclick="copyJson()">Copy (full)</button>
+        <button class="btn primary" onclick="exportWorld()">Download world.json</button>
+      </div>
+      <pre id="jsonPane">Click Refresh to preview</pre>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modalOverlay">
+    <div class="modal" id="theModal">
+      <div class="mhdr"><span id="modalTitle">Dialog</span>
+        <button class="btn" style="padding:2px 8px;font-size:.68rem" onclick="closeModal()">✕</button>
+      </div>
+      <div class="mbody" id="modalBody"></div>
+      <div class="mfoot" id="modalFoot"><button class="btn" onclick="closeModal()">Cancel</button></div>
+    </div>
+  </div>
+  <div id="toast"></div>
+
+  <script src="constants.js"></script>
+  <script src="world.js"></script>
+  <script src="maps.js"></script>
+  <script src="entities.js"></script>
+  <script src="dialogs.js"></script>
+  <script src="masks.js"></script>
+  <script src="ui.js"></script>
+</body>
+
+</html>
